@@ -1,0 +1,87 @@
+33	MUTEX_INIT
+34	MUTEX_UNLOCK
+35	MUTEX_LOCK
+36	SEMAPHORE_INIT
+37	SEMAPHORE_GIVE
+38	SEMAPHORE_TAKE
+39	SLEEP
+
+101	TP_IRQ
+102	TP_READ
+103 KEY_READ        event=%x
+
+104	VSYNC
+105	LCD_Post        region=(%u, %u, %u, %u)
+
+#
+# possible de cmd type:
+# 0-compose (to lcd)
+# 1-compose_vsync (wait for vsyn)
+# 2-compose_wb (write back to buffer)
+# 3-color_fill
+# 4-blit
+# 5-blend
+# 6-blend_fg
+# 7-rotate
+#
+106	DE_Draw         cmd=%d, w=%u, h=%u
+
+120	GUI_Init             view=%u                                             | Returns disp=%p
+121	GUI_Deinit           view=%u, disp=%p
+122	GUI_Clear            view=%u
+123	GUI_Task
+124	LVGL_IndevTask       indev=%p, type=%u
+125	LVGL_RefrTask        disp=%p
+126	LVGL_Disp_Register                                                       | Returns disp=%p
+127	LVGL_Disp_Remove     disp=%p
+128	LVGL_OBJ_Draw        obj=%p, region=(%d, %d, %d, %d)                     | Returns obj=%p
+129	LVGL_OBJ_Create      obj=%p, parent=%p
+130	LVGL_OBJ_Del         obj=%p
+131	LVGL_Draw_Complex    %s
+132	LVGL_Update_Layout   disp=%p
+133	LVGL_Event           obj=%p, code=%d
+134	LVGL_WaitCB
+
+140	View_Create          view=%u                                             | Returns view=%u
+141	View_Preload         view=%u                                             | Returns view=%u
+142	View_Layout          view=%u                                             | Returns view=%u
+143	View_Pause           view=%u                                             | Returns view=%u
+144	View_Resume          view=%u                                             | Returns view=%u
+145	View_Delete          view=%u                                             | Returns view=%u
+146	View_SetProp         view=%u, prop=%u, value=%d                          | Returns view=%u
+147	View_Draw            frame=%u, view=%u, part=%u, region=(%d, %d, %d, %d) | Returns view=%u
+148	View_Post            frame=%u, view=%u, crop=(%d, %d, %d, %d)
+155	View_Swapbuf         view=%u
+
+#
+# possible msg values:
+# 1-preload
+# 2-layout
+# 3-delete
+# 4-paint
+# 6-focus
+# 7-defocus
+# 9-pause
+# 10-resume
+149	View_CB_Proc         view=%u, msg=%u                                     | Returns view=%u
+150	View_CB_Focus        view=%u, focus=%u                                   | Returns view=%u
+
+151	View_Compress        view=%u                                             | Returns length=%u
+152	View_DeCompress      view=%u                                             | Returns length=%u
+
+153	GraphicBuf_Alloc     w=%u, h=%u, format=%u                               | Returns buf=%p
+154	GraphicBuf_Free      buf=%p
+
+160	Res_Scene_Load       scene_id=%u                                         | Returns scene_id=%u
+161	Res_Pics_Load        parent=%p                                           | Returns parent=%p
+162	Res_Strs_Load        parent=%p                                           | Returns parent=%p
+163	Res_Bmp_Load_0       bmp_id=%u                                           | Returns bmp_id=%u
+164	Res_Bmp_Load_1       bmp_id=%u                                           | Returns bmp_id=%u
+165	Res_Bmp_Load_2       bmp_id=%u                                           | Returns bmp_id=%u
+166	Res_Check_Preload    scene_id=%u                                         | Returns scene_id=%u
+167	Res_Pics_Preload     parent=%p                                           | Returns parent=%p
+168	Res_Unload           %s                                                  | Returns id/count=%u
+169	Res_Scene_Preload_0  scene_id=%u                                         | Returns scene_id=%u
+170	Res_Scene_Preload_1  scene_id=%u                                         | Returns scene_id=%u
+171	Res_Scene_Preload_2  scene_id=%u                                         | Returns scene_id=%u
+172	Res_Scene_Preload_3  scene_id=%u                                         | Returns scene_id=%u

@@ -1,0 +1,366 @@
+version: "4.1"
+name: mdk_clang
+type: ARM
+deviceName: null
+packDir: null
+srcDirs: []
+virtualFolder:
+  name: <virtual_root>
+  files: []
+  folders:
+    - name: app
+      files:
+        - path: ../src/main/main.c
+        - path: ../src/actions/bt_le_op.c
+        - path: ../src/actions/ble_super_service.c
+        - path: ../src/main/msg_manager.c
+        - path: ../src/main/system_app_wdg.c
+        - path: ../src/actions/ble_data_test_sample.c
+      folders: []
+    - name: app_system
+      files:
+        - path: ../src/main/sys_monitor.c
+        - path: ../src/main/sys_wakelock.c
+        - path: ../src/main/sys_standby.c
+      folders: []
+    - name: aarch32
+      files:
+        - path: ../../../arch/common/isr_tables.c
+        - path: ../../../arch/arm/core/offsets/offsets.c
+        - path: ../../../arch/common/sw_isr_common.c
+        - path: ../../../arch/arm/core/aarch32/swap.c
+        - path: ../../../arch/arm/core/aarch32/swap_helper.S
+        - path: ../../../arch/arm/core/aarch32/irq_manage.c
+        - path: ../../../arch/arm/core/aarch32/thread.c
+        - path: ../../../arch/arm/core/aarch32/cpu_idle.S
+        - path: ../../../arch/arm/core/aarch32/fatal.c
+        - path: ../../../arch/arm/core/aarch32/nmi.c
+        - path: ../../../arch/arm/core/aarch32/nmi_on_reset.S
+        - path: ../../../arch/arm/core/aarch32/prep_c.c
+        - path: ../../../arch/arm/core/aarch32/unwind.c
+        - path: ../../../arch/arm/core/aarch32/isr_wrapper.S
+      folders: []
+    - name: aarch32__cortex_m
+      files:
+        - path: ../../../arch/arm/core/aarch32/cortex_m/vector_table.S
+        - path: ../../../arch/arm/core/aarch32/cortex_m/reset.S
+        - path: ../../../arch/arm/core/aarch32/cortex_m/fault_s.S
+        - path: ../../../arch/arm/core/aarch32/cortex_m/fault.c
+        - path: ../../../arch/arm/core/aarch32/cortex_m/exc_exit.S
+        - path: ../../../arch/arm/core/aarch32/cortex_m/scb.c
+        - path: ../../../arch/arm/core/aarch32/cortex_m/irq_init.c
+        - path: ../../../arch/arm/core/aarch32/cortex_m/thread_abort.c
+        - path: ../../../arch/arm/core/aarch32/cortex_m/mpu/arm_mpu.c
+      folders: []
+    - name: soc
+      files:
+        - path: ../../../soc/arm/actions/tai/soc_efuse/obj/soc_efuse_r.o
+        - path: ../../../soc/arm/actions/tai/soc.c
+        - path: ../../../soc/arm/actions/tai/soc_pm.c
+        - path: ../../../soc/arm/actions/tai/soc_reset.c
+        - path: ../../../soc/arm/actions/tai/soc_clock.c
+        - path: ../../../soc/arm/actions/tai/soc_pinmux.c
+        - path: ../../../soc/arm/actions/tai/spicache.c
+        - path: ../../../soc/arm/actions/tai/soc_boot.c
+        - path: ../../../soc/arm/actions/tai/soc_memctrl.c
+        - path: ../../../soc/arm/actions/tai/soc_se_trng.c
+        - path: ../../../soc/arm/actions/tai/soc_sleep/src/soc_sleep_cfg.c
+        - path: ../../../soc/arm/actions/tai/soc_sleep/obj/policy_sleep.o
+        - path: ../../../soc/arm/actions/tai/soc_sleep/obj/soc_power.o
+        - path: ../../../soc/arm/actions/tai/soc_sleep/obj/soc_sleep.o
+        - path: ../../../soc/arm/actions/tai/soc_sleep/obj/soc_sleep_1.o
+      folders: []
+    - name: board
+      files:
+        - path: ../../../boards/arm/tai_evb/board.c
+        - path: ../../../boards/arm/tai_evb/ksdfs.s
+      folders: []
+    - name: kernel
+      files:
+        - path: ../../../kernel/device.c
+        - path: ../../../kernel/errno.c
+        - path: ../../../kernel/fatal.c
+        - path: ../../../kernel/idle.c
+        - path: ../../../kernel/init.c
+        - path: ../../../kernel/kheap.c
+        - path: ../../../kernel/mem_slab.c
+        - path: ../../../kernel/mutex.c
+        - path: ../../../kernel/queue.c
+        - path: ../../../kernel/sched.c
+        - path: ../../../kernel/sem.c
+        - path: ../../../kernel/stack.c
+        - path: ../../../kernel/system_work_q.c
+        - path: ../../../kernel/thread.c
+        - path: ../../../kernel/thread_abort.c
+        - path: ../../../kernel/version.c
+        - path: ../../../kernel/work_q.c
+        - path: ../../../kernel/condvar.c
+        - path: ../../../kernel/smp.c
+        - path: ../../../kernel/banner.c
+        - path: ../../../kernel/xip.c
+        - path: ../../../kernel/timeout.c
+        - path: ../../../kernel/timer.c
+        - path: ../../../kernel/poll.c
+        - path: ../../../kernel/mempool.c
+      folders: []
+    - name: drivers
+      files:
+        - path: ../../../drivers/timer/sys_clock_init.c
+        - path: ../../../drivers/timer/acts_timer.c
+        - path: ../../../drivers/serial/uart_acts.c
+        - path: ../../../drivers/gpio/gpio_acts.c
+        - path: ../../../drivers/dma/vdma_acts.c
+        - path: ../../../drivers/flash/spi_flash_acts.c
+        - path: ../../../drivers/flash/flash_page_layout.c
+        - path: ../../../drivers/nvram/nvram_config.c
+        - path: ../../../drivers/nvram/nvram_storage.c
+        - path: ../../../drivers/bluetooth/bt_drv.c
+        - path: ../../../drivers/bluetooth/hci_acts.c
+        - path: ../../../drivers/ipmsg/tai/ipmsg_btc.c
+      folders: []
+    - name: lib__os
+      files:
+        - path: ../../../lib/os/cbprintf.c
+        - path: ../../../lib/os/crc32_sw.c
+        - path: ../../../lib/os/crc16_sw.c
+        - path: ../../../lib/os/crc8_sw.c
+        - path: ../../../lib/os/crc7_sw.c
+        - path: ../../../lib/os/dec.c
+        - path: ../../../lib/os/fdtable.c
+        - path: ../../../lib/os/hex.c
+        - path: ../../../lib/os/notify.c
+        - path: ../../../lib/os/printk.c
+        - path: ../../../lib/os/onoff.c
+        - path: ../../../lib/os/rb.c
+        - path: ../../../lib/os/sem.c
+        - path: ../../../lib/os/thread_entry.c
+        - path: ../../../lib/os/timeutil.c
+        - path: ../../../lib/os/work_q.c
+        - path: ../../../lib/os/heap.c
+        - path: ../../../lib/os/heap-validate.c
+        - path: ../../../lib/os/cbprintf_complete.c
+        - path: ../../../subsys/logging/log_minimal.c
+        - path: ../../../subsys/net/lib/utils/addr_utils.c
+        - path: ../../../subsys/settings/src/settings_store.c
+        - path: ../../../subsys/settings/src/settings.c
+        - path: ../../../subsys/settings/src/settings_init.c
+        - path: ../../../subsys/settings/src/settings_nvram.c
+        - path: ../../../subsys/sdfs/sdfs.c
+        - path: ../../../subsys/trace/show_thread.c
+        - path: ../../../subsys/partition/partition.c
+        - path: ../../../subsys/fw_version/fw_version.c
+        - path: ../../../drivers/console/uart_console.c
+        - path: ../../../ext/crypto/tinycrypt/lib/source/utils.c
+        - path: ../../../ext/crypto/tinycrypt/lib/source/aes_decrypt.c
+        - path: ../../../ext/crypto/tinycrypt/lib/source/aes_encrypt.c
+        - path: ../../../ext/crypto/tinycrypt/lib/source/cmac_mode.c
+        - path: ../../../ext/crypto/tinycrypt/lib/source/sha256.c
+        - path: ../../../ext/crypto/tinycrypt/lib/source/hmac.c
+        - path: ../../../ext/crypto/tinycrypt/lib/source/hmac_prng.c
+        - path: ../../../subsys/power/power.c
+        - path: ../../../subsys/power/device.c
+        - path: ../../../soc/arm/common/cortex_m/arm_mpu_regions.c
+      folders: []
+    - name: lib__libc
+      files:
+        - path: ../../../lib/libc/minimal/source/stdlib/abort.c
+        - path: ../../../lib/libc/minimal/source/stdlib/atoi.c
+        - path: ../../../lib/libc/minimal/source/stdlib/strtol.c
+        - path: ../../../lib/libc/minimal/source/stdlib/strtoul.c
+        - path: ../../../lib/libc/minimal/source/stdlib/malloc.c
+        - path: ../../../lib/libc/minimal/source/stdlib/bsearch.c
+        - path: ../../../lib/libc/minimal/source/stdlib/exit.c
+        - path: ../../../lib/libc/minimal/source/string/strncasecmp.c
+        - path: ../../../lib/libc/minimal/source/string/strstr.c
+        - path: ../../../lib/libc/minimal/source/string/strspn.c
+        - path: ../../../lib/libc/minimal/source/stdout/stdout_console.c
+        - path: ../../../lib/libc/minimal/source/stdout/sprintf.c
+        - path: ../../../lib/libc/minimal/source/stdout/fprintf.c
+        - path: ../../../lib/libc/minimal/source/time/gmtime.c
+        - path: ../../../lib/libc/minimal/source/string/string.c
+        - path: ../../../lib/libc/minimal/source/string/string.S
+      folders: []
+    - name: lib
+      files:
+        - path: ../../../lib/posix/nanosleep.c
+        - path: ../../../lib/posix/pthread_common.c
+        - path: ../../../lib/rbuf/rbuf_core.c
+        - path: ../../../lib/rbuf/rbuf_init.c
+        - path: ../../../lib/rbuf/rbuf_pool.c
+        - path: ../../../lib/crc/crc.c
+      folders: []
+    - name: subsys__bluetooth
+      files:
+        - path: ../../../subsys/bluetooth/common/dummy.c
+        - path: ../../../subsys/bluetooth/common/log.c
+        - path: ../../../subsys/bluetooth/common/rpa.c
+        - path: ../../../subsys/bluetooth/host/settings.c
+        - path: ../../../subsys/bluetooth/host/uuid.c
+        - path: ../../../subsys/bluetooth/host/addr.c
+        - path: ../../../subsys/bluetooth/host/buf.c
+        - path: ../../../subsys/bluetooth/host/hci_core.c
+        - path: ../../../subsys/bluetooth/host/hci_common.c
+        - path: ../../../subsys/bluetooth/host/crypto.c
+        - path: ../../../subsys/bluetooth/host/conn.c
+        - path: ../../../subsys/bluetooth/host/l2cap.c
+        - path: ../../../subsys/bluetooth/host/att.c
+        - path: ../../../subsys/bluetooth/host/gatt.c
+        - path: ../../../subsys/bluetooth/host/keys.c
+        - path: ../../../subsys/bluetooth/host/smp.c
+      folders: []
+    - name: subsys__net
+      files:
+        - path: ../../../subsys/net/buf.c
+      folders: []
+    - name: ::Device
+      files: []
+      folders: []
+dependenceList: []
+outDir: build
+miscInfo:
+  uid: 8bbbab8194cf782e5d8f01bff2d84f1a
+targets:
+  zephyr:
+    cppPreprocessAttrs:
+      defineList: []
+      incList:
+        - ../src/include
+        - ../../../include/rbuf
+        - .cmsis/include
+        - RTE/_zephyr
+      libList: []
+    excludeList: []
+    toolchain: AC6
+    toolchainConfigMap:
+      AC6:
+        archExtensions: ""
+        cpuType: Cortex-M4
+        floatingPointHardware: none
+        options:
+          version: 3
+          afterBuildTasks:
+            - name: "[Copy linker output for Keil User Commands]"
+              abortAfterFailed: true
+              command: mkdir ${KEIL_OUTPUT_DIR} & copy "${OutDir}\${ProjectName}.axf" "${KEIL_OUTPUT_DIR}\${KEIL_OUTPUT_NAME}.axf"
+              disable: false
+            - name: UserCommand.bat "!L" "$K\ARM"
+              abortAfterFailed: true
+              command: UserCommand.bat "${KEIL_OUTPUT_DIR}\${KEIL_OUTPUT_NAME}.axf" "${ToolchainRoot}\\ARM"
+              disable: false
+            - name: PackCommand.bat
+              abortAfterFailed: true
+              command: PackCommand.bat
+              disable: false
+          asm-compiler:
+            $use: asm-auto
+            defines:
+              - _ASMLANGUAGE
+            misc-controls: -imacros./linker_conf.h -imacros../src/include/autoconf.h
+          beforeBuildTasks: []
+          c/cpp-compiler:
+            CXX_FLAGS: -imacros./linker_conf.h -nostdlib -Wno-section
+            C_FLAGS: -imacros./linker_conf.h -nostdlib -Wno-section
+            language-c: c99
+            language-cpp: c++11
+            link-time-optimization: false
+            one-elf-section-per-function: true
+            optimization: level-image-size
+            short-enums#wchar: true
+            warnings: ac5-like-warnings
+          global:
+            output-debug-info: enable
+            use-microLIB: true
+          linker:
+            $outputTaskExcludes:
+              - .bin
+            misc-controls: --no_startup --entry __start --keep=_irq_vector_table --keep=__init_* --keep=__device_* --keep=ksdfs.o(.ksdfs) --via linker_flag.txt
+            output-format: elf
+            ro-base: ""
+            rw-base: ""
+            xo-base: ""
+        scatterFilePath: linker_pass_final.sct
+        storageLayout:
+          RAM:
+            - id: 1
+              isChecked: false
+              mem:
+                size: "0x0"
+                startAddr: "0x0"
+              noInit: false
+              tag: RAM
+            - id: 2
+              isChecked: false
+              mem:
+                size: "0x0"
+                startAddr: "0x0"
+              noInit: false
+              tag: RAM
+            - id: 3
+              isChecked: false
+              mem:
+                size: "0x0"
+                startAddr: "0x0"
+              noInit: false
+              tag: RAM
+            - id: 1
+              isChecked: true
+              mem:
+                size: "0x20000"
+                startAddr: "0x20000000"
+              noInit: false
+              tag: IRAM
+            - id: 2
+              isChecked: false
+              mem:
+                size: "0x0"
+                startAddr: "0x0"
+              noInit: false
+              tag: IRAM
+          ROM:
+            - id: 1
+              isChecked: false
+              isStartup: false
+              mem:
+                size: "0x0"
+                startAddr: "0x0"
+              tag: ROM
+            - id: 2
+              isChecked: false
+              isStartup: false
+              mem:
+                size: "0x0"
+                startAddr: "0x0"
+              tag: ROM
+            - id: 3
+              isChecked: false
+              isStartup: false
+              mem:
+                size: "0x0"
+                startAddr: "0x0"
+              tag: ROM
+            - id: 1
+              isChecked: true
+              isStartup: true
+              mem:
+                size: "0x40000"
+                startAddr: "0x0"
+              tag: IROM
+            - id: 2
+              isChecked: false
+              isStartup: false
+              mem:
+                size: "0x0"
+                startAddr: "0x0"
+              tag: IROM
+        useCustomScatterFile: true
+    uploadConfigMap:
+      JLink:
+        baseAddr: ""
+        bin: ""
+        cpuInfo:
+          cpuName: "null"
+          vendor: "null"
+        otherCmds: ""
+        proType: 1
+        speed: 8000
+    uploader: JLink
