@@ -382,7 +382,7 @@ void conn_notify(void)
  * - 停止广播；
  * - 保存连接引用；
  * - 通知服务层 on_connected；
- * - 请求链路安全升级到 L2；
+ * - 链路安全按需触发（访问加密特征时再配对/加密）；
  * - 向系统上报 CONNECTED 事件。
  */
 static void cgm_connected_cb(struct bt_conn *conn, uint8_t err)
@@ -403,7 +403,6 @@ static void cgm_connected_cb(struct bt_conn *conn, uint8_t err)
 		cgm_stop_advertising();
 		slave_conn = bt_conn_ref(conn);
 		ble_super_on_connected(conn);
-		bt_conn_set_security(conn, BT_SECURITY_L2);
 
 		cgm_app_to_msg(MSG_BLE_STATE, CONNECTED);
 

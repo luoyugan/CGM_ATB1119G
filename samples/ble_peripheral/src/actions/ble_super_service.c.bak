@@ -1,0 +1,1333 @@
+/*Copyright (c) 2018 Actions (Zhuhai) Technology
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+
+#include <zephyr/types.h>
+#include <stddef.h>
+#include <string.h>
+#include "errno.h"
+#include <sys/printk.h>
+#include <sys/byteorder.h>
+#include <zephyr.h>
+
+#include <bluetooth/bluetooth.h>
+#include <bluetooth/att.h>
+#include <bluetooth/hci.h>
+#include <bluetooth/conn.h>
+#include <bluetooth/uuid.h>
+#include <bluetooth/gatt.h>
+
+#include "ble_super_service.h"
+#include "ble_data_test_sample.h"
+
+/*
+ * BT_GATT_SERVICE_DEFINE 会生成 attr_<service_name>[] 符号。
+ * 由于本文件有回调在服务定义之前引用这些数组，这里先做前向声明。
+ */
+extern const struct bt_gatt_attr attr_cgm_cgms_svc[];
+extern const struct bt_gatt_attr attr_cgm_bas_svc[];
+
+/*
+ * ========== Legacy Custom Service UUID ==========
+ *
+ * 设计目的：
+ * - 保留历史私有服务，兼容旧版客户端。
+ * - 新功能由 CGMS/DIS/BAS 承担，legacy 不再承担规范职责。
+ */
+static const struct bt_uuid_128 cgm_legacy_svc_uuid = BT_UUID_INIT_128(
+	0xdd, 0x34, 0x9b, 0x5f, 0x80, 0x00, 0x00, 0x80,
+0x00, 0x10, 0x00, 0x00, 0xf6, 0xfe,	0x00, 0x00);
+
+static const struct bt_uuid_128 cgm_legacy_test_uuid = BT_UUID_INIT_128(
+	0x89, 0x78, 0x61, 0x63, 0x74, 0x4c, 0x45, 0xb0,
+0xd5, 0x4e, 0xf2, 0x2f, 0x02, 0x00,	0x5f, 0x00);
+
+/* ========== CGMS 相关宏定义 ========== */
+#define CGM_CGMS_SERVICE_UUID_VAL                0x181F
+#define CGM_CGMS_MEAS_UUID_VAL                   0x2AA7
+#define CGM_CGMS_FEATURE_UUID_VAL                0x2AA8
+#define CGM_CGMS_STATUS_UUID_VAL                 0x2AA9
+#define CGM_CGMS_SESSION_START_UUID_VAL          0x2AAA
+#define CGM_CGMS_SESSION_RUN_TIME_UUID_VAL       0x2AAB
+#define CGM_CGMS_SOCP_UUID_VAL                   0x2AAC
+#define CGM_CGMS_RACP_UUID_VAL                   0x2A52
+
+/* SOCP 最小集操作码 */
+#define CGM_SOCP_OP_SET_COMM_INTERVAL            0x01
+#define CGM_SOCP_OP_GET_COMM_INTERVAL            0x02
+#define CGM_SOCP_OP_COMM_INTERVAL_RSP            0x03
+#define CGM_SOCP_OP_START_SESSION                0x1A
+#define CGM_SOCP_OP_STOP_SESSION                 0x1B
+#define CGM_SOCP_OP_RESPONSE_CODE                0x1C
+
+/* SOCP 响应码 */
+#define CGM_SOCP_RSP_SUCCESS                     0x01
+#define CGM_SOCP_RSP_OP_CODE_NOT_SUPPORTED       0x02
+#define CGM_SOCP_RSP_INVALID_OPERAND             0x03
+#define CGM_SOCP_RSP_PROCEDURE_NOT_COMPLETED     0x04
+#define CGM_SOCP_RSP_PARAMETER_OUT_OF_RANGE      0x05
+
+/* ========== RACP 操作码（依据 CGMS v1.0.1, §3.6 / Generic RACP [3]） ========== */
+#define CGM_RACP_OP_REPORT_STORED_RECORDS        0x01
+#define CGM_RACP_OP_DELETE_STORED_RECORDS        0x02
+#define CGM_RACP_OP_ABORT_OPERATION              0x03
+#define CGM_RACP_OP_REPORT_NUM_STORED_RECORDS    0x04
+#define CGM_RACP_OP_NUM_STORED_RECORDS_RSP       0x05
+#define CGM_RACP_OP_RESPONSE_CODE                0x06
+
+/* RACP 算子 */
+#define CGM_RACP_OPERATOR_NULL                   0x00
+#define CGM_RACP_OPERATOR_ALL_RECORDS            0x01
+#define CGM_RACP_OPERATOR_LT_EQ                  0x02
+#define CGM_RACP_OPERATOR_GT_EQ                  0x03
+#define CGM_RACP_OPERATOR_WITHIN_RANGE           0x04
+#define CGM_RACP_OPERATOR_FIRST                  0x05
+#define CGM_RACP_OPERATOR_LAST                   0x06
+
+/* RACP 响应码 */
+#define CGM_RACP_RSP_SUCCESS                     0x01
+#define CGM_RACP_RSP_OP_NOT_SUPPORTED            0x02
+#define CGM_RACP_RSP_INVALID_OPERATOR            0x03
+#define CGM_RACP_RSP_OPERATOR_NOT_SUPPORTED      0x04
+#define CGM_RACP_RSP_INVALID_OPERAND             0x05
+#define CGM_RACP_RSP_NO_RECORDS_FOUND            0x06
+#define CGM_RACP_RSP_ABORT_UNSUCCESSFUL          0x07
+#define CGM_RACP_RSP_PROCEDURE_NOT_COMPLETED     0x08
+#define CGM_RACP_RSP_OPERAND_NOT_SUPPORTED       0x09
+
+/* RACP 滤波类型（CGM 只支持 0x01 Time Offset） */
+#define CGM_RACP_FILTER_TYPE_TIME_OFFSET         0x01
+
+/* ATT 应用层错误码（用于 RACP 流程保障） */
+#define CGM_ATT_ERR_PROCEDURE_ALREADY_IN_PROGRESS  0x80
+
+/*
+ * 外部回调声明（来自 bt_le_op.c / ble_data_test_sample.c）
+ *
+ * 说明：
+ * - 为兼容原工程，保持这些符号可用。
+ */
+void conn_notify(void);
+void bt_data_trans_cancel(void);
+
+/* ========== 运行时状态 ========== */
+static uint8_t cgm_legacy_notify_enabled;
+static uint8_t cgm_cgms_meas_notify_enabled;
+static uint8_t cgm_cgms_racp_indicate_enabled;
+static uint8_t cgm_cgms_socp_indicate_enabled;
+static uint8_t cgm_bas_notify_enabled;
+
+static struct bt_conn *cgm_active_conn;
+static struct k_delayed_work cgm_meas_work;
+
+/* CGMS 运行数据 */
+static uint16_t cgm_feature_flags;
+static uint8_t cgm_type_sample_location = 0x60;
+static uint8_t cgm_status_annunciation[3] = {0x00, 0x00, 0x00};
+static uint8_t cgm_session_start_time[9] = {0xE9, 0x07, 0x03, 0x0A, 0x00, 0x00, 0x00, 0x00, 0x00};
+static uint16_t cgm_session_run_time_min;
+static uint16_t cgm_time_offset_min;
+static uint16_t cgm_glucose_mg_dl = 110;
+static uint8_t cgm_comm_interval_min = 5;
+static bool cgm_session_running;
+
+/* BAS 运行数据 */
+static uint8_t cgm_battery_level_percent = 95;
+
+/* indication 缓冲（必须保证发送期间有效） */
+static struct bt_gatt_indicate_params cgm_socp_indicate_params;
+static struct bt_gatt_indicate_params cgm_racp_indicate_params;
+static uint8_t cgm_socp_indicate_buffer[8];
+static uint8_t cgm_racp_indicate_buffer[4];
+
+/* ========== CGM Measurement 记录数据库（环形缓冲） ========== */
+
+/*
+ * 最多保留 CGM_DB_MAX_RECORDS 条历史记录；超出时覆盖最旧记录。
+ * 每条记录保存 SFLOAT glucose、Time Offset 以及 Sensor Status Annunciation 快照，
+ * 足以重建完整 Measurement 报文（供 RACP Report Stored Records 使用）。
+ */
+#define CGM_DB_MAX_RECORDS  96U
+
+struct cgm_db_record {
+	uint16_t time_offset;    /* session 内相对分钟偏移（兼作序列号） */
+	uint16_t glucose_sfloat; /* SFLOAT 编码的葡萄糖浓度 (mg/dL) */
+	uint8_t  status[3];      /* Sensor Status Annunciation 快照 */
+};
+
+static struct cgm_db_record cgm_db[CGM_DB_MAX_RECORDS];
+static uint16_t cgm_db_count;  /* 当前有效记录数，最大为 CGM_DB_MAX_RECORDS */
+static uint16_t cgm_db_head;   /* 最旧记录的索引 */
+
+/* ========== RACP 进行中状态 ========== */
+
+static struct k_delayed_work cgm_racp_work;
+static volatile bool cgm_racp_in_progress;
+static volatile bool cgm_racp_abort_req;
+static uint8_t  cgm_racp_req_opcode;    /* 原始请求 OpCode，用于构造响应 */
+static uint8_t  cgm_racp_req_operator;  /* 原始请求 Operator */
+static uint16_t cgm_racp_filter_min;    /* Time Offset 最小值（过滤用） */
+static uint16_t cgm_racp_filter_max;    /* Time Offset 最大值（过滤用） */
+
+/*
+ * @brief Legacy CCC 写回调。
+ *
+ * @details
+ * 1) 该回调用于旧私有特征通知开关。
+ * 2) 当通知打开时通过 conn_notify() 触发旧数据链路；关闭时取消传输。
+ */
+static void cgm_legacy_test_ccc_cfg_changed(const struct bt_gatt_attr *attr, uint16_t value)
+{
+	ARG_UNUSED(attr);
+
+	cgm_legacy_notify_enabled = (value == BT_GATT_CCC_NOTIFY) ? 1U : 0U;
+	printk("legacy notify : %d\n", cgm_legacy_notify_enabled);
+
+	if (cgm_legacy_notify_enabled) {
+		conn_notify();
+	} else {
+		bt_data_trans_cancel();
+	}
+}
+
+/*
+ * @brief Legacy 写回调。
+ *
+ * @details
+ * 兼容原有吞吐测试行为，仅统计写入长度，不对数据内容做解析。
+ */
+static int cgm_legacy_test_write_cb(struct bt_conn *conn,
+				    const struct bt_gatt_attr *attr,
+				    const void *buf, uint16_t len,
+				    uint16_t offset, uint8_t flags)
+{
+	ARG_UNUSED(conn);
+	ARG_UNUSED(attr);
+	ARG_UNUSED(buf);
+	ARG_UNUSED(offset);
+	ARG_UNUSED(flags);
+
+	update_write_stats(len);
+	return len;
+}
+
+/* ========== CGMS 读写回调函数 ========== */
+
+/**
+ * @brief 读取 CGMS Feature 特征值。
+ *
+ * @param conn   当前连接对象。
+ * @param attr   当前属性对象。
+ * @param buf    输出缓冲区。
+ * @param len    输出缓冲区可写长度。
+ * @param offset 读取偏移。
+ * @return 实际返回字节数，或 BT_GATT_ERR 错误码。
+ */
+static ssize_t cgm_cgms_feature_read_cb(struct bt_conn *conn,
+					const struct bt_gatt_attr *attr,
+					void *buf, uint16_t len,
+					uint16_t offset)
+{
+	uint8_t value[3];
+
+	sys_put_le16(cgm_feature_flags, value);
+	value[2] = cgm_type_sample_location;
+
+	return bt_gatt_attr_read(conn, attr, buf, len, offset, value, sizeof(value));
+}
+
+/**
+ * @brief 读取 CGMS Status 特征值。
+ *
+ * @param conn   当前连接对象。
+ * @param attr   当前属性对象。
+ * @param buf    输出缓冲区。
+ * @param len    输出缓冲区可写长度。
+ * @param offset 读取偏移。
+ * @return 实际返回字节数，或 BT_GATT_ERR 错误码。
+ */
+static ssize_t cgm_cgms_status_read_cb(struct bt_conn *conn,
+				   const struct bt_gatt_attr *attr,
+				   void *buf, uint16_t len,
+				   uint16_t offset)
+{
+	return bt_gatt_attr_read(conn, attr, buf, len, offset,
+				 cgm_status_annunciation, sizeof(cgm_status_annunciation));
+}
+
+/**
+ * @brief 读取 CGMS Session Start Time 特征值。
+ *
+ * @param conn   当前连接对象。
+ * @param attr   当前属性对象。
+ * @param buf    输出缓冲区。
+ * @param len    输出缓冲区可写长度。
+ * @param offset 读取偏移。
+ * @return 实际返回字节数，或 BT_GATT_ERR 错误码。
+ */
+static ssize_t cgm_cgms_session_start_read_cb(struct bt_conn *conn,
+					  const struct bt_gatt_attr *attr,
+					  void *buf, uint16_t len,
+					  uint16_t offset)
+{
+	return bt_gatt_attr_read(conn, attr, buf, len, offset,
+				 cgm_session_start_time, sizeof(cgm_session_start_time));
+}
+
+/**
+ * @brief 写入 CGMS Session Start Time 特征值。
+ *
+ * @param conn   当前连接对象。
+ * @param attr   当前属性对象。
+ * @param buf    输入数据缓冲区。
+ * @param len    输入数据长度。
+ * @param offset 写入偏移。
+ * @param flags  ATT 写标志。
+ * @return 成功返回写入字节数，失败返回 BT_GATT_ERR 错误码。
+ */
+static ssize_t cgm_cgms_session_start_write_cb(struct bt_conn *conn,
+					   const struct bt_gatt_attr *attr,
+					   const void *buf, uint16_t len,
+					   uint16_t offset, uint8_t flags)
+{
+	ARG_UNUSED(conn);
+	ARG_UNUSED(attr);
+	ARG_UNUSED(flags);
+
+	if (offset > sizeof(cgm_session_start_time) ||
+	    (offset + len) > sizeof(cgm_session_start_time)) {
+		return BT_GATT_ERR(BT_ATT_ERR_INVALID_OFFSET);
+	}
+
+	memcpy(&cgm_session_start_time[offset], buf, len);
+	return len;
+}
+
+/**
+ * @brief 读取 CGMS Session Run Time 特征值。
+ *
+ * @param conn   当前连接对象。
+ * @param attr   当前属性对象。
+ * @param buf    输出缓冲区。
+ * @param len    输出缓冲区可写长度。
+ * @param offset 读取偏移。
+ * @return 实际返回字节数，或 BT_GATT_ERR 错误码。
+ */
+static ssize_t cgm_cgms_session_run_time_read_cb(struct bt_conn *conn,
+					     const struct bt_gatt_attr *attr,
+					     void *buf, uint16_t len,
+					     uint16_t offset)
+{
+	uint8_t value[2];
+
+	sys_put_le16(cgm_session_run_time_min, value);
+	return bt_gatt_attr_read(conn, attr, buf, len, offset, value, sizeof(value));
+}
+
+/**
+ * @brief 发送 SOCP indication。
+ *
+ * @param conn     当前连接对象。
+ * @param data     需要发送的载荷。
+ * @param data_len 载荷长度。
+ * @return 无返回值。
+ *
+ * @details
+ * 该函数会先把数据复制到静态缓冲，再调用 bt_gatt_indicate，
+ * 保证异步发送阶段数据地址有效。
+ */
+static void cgm_cgms_socp_send_indication(struct bt_conn *conn,
+					   const uint8_t *data,
+					   uint16_t data_len)
+{
+	memcpy(cgm_socp_indicate_buffer, data, data_len);
+	cgm_socp_indicate_params.attr = &attr_cgm_cgms_svc[CGM_CGMS_SOCP_HDL];
+	cgm_socp_indicate_params.data = cgm_socp_indicate_buffer;
+	cgm_socp_indicate_params.len = data_len;
+	cgm_socp_indicate_params.func = NULL;
+	cgm_socp_indicate_params.destroy = NULL;
+
+	bt_gatt_indicate(conn, &cgm_socp_indicate_params);
+}
+
+/**
+ * @brief 发送 SOCP Response Code 响应。
+ *
+ * @param conn       当前连接对象。
+ * @param req_opcode 请求操作码。
+ * @param rsp_code   响应码。
+ * @return 无返回值。
+ */
+static void cgm_cgms_socp_send_response_code(struct bt_conn *conn,
+					      uint8_t req_opcode,
+					      uint8_t rsp_code)
+{
+	uint8_t rsp[3] = {
+		CGM_SOCP_OP_RESPONSE_CODE,
+		req_opcode,
+		rsp_code,
+	};
+
+	cgm_cgms_socp_send_indication(conn, rsp, sizeof(rsp));
+}
+
+/**
+ * @brief 处理 SOCP 写请求。
+ *
+ * @param conn   当前连接对象。
+ * @param attr   当前属性对象。
+ * @param buf    输入命令缓冲区。
+ * @param len    输入命令长度。
+ * @param offset 写入偏移。
+ * @param flags  ATT 写标志。
+ * @return 成功返回写入字节数，失败返回 BT_GATT_ERR 错误码。
+ */
+static ssize_t cgm_cgms_socp_write_cb(struct bt_conn *conn,
+				  const struct bt_gatt_attr *attr,
+				  const void *buf, uint16_t len,
+				  uint16_t offset, uint8_t flags)
+{
+	const uint8_t *data = buf;
+	uint8_t opcode;
+
+	ARG_UNUSED(attr);
+	ARG_UNUSED(flags);
+
+	if (offset != 0 || len < 1) {
+		return BT_GATT_ERR(BT_ATT_ERR_INVALID_OFFSET);
+	}
+
+	if (!cgm_cgms_socp_indicate_enabled) {
+		return BT_GATT_ERR(BT_ATT_ERR_CCC_IMPROPER_CONF);
+	}
+
+	opcode = data[0];
+
+	switch (opcode) {
+	case CGM_SOCP_OP_SET_COMM_INTERVAL:
+		if (len < 2) {
+			cgm_cgms_socp_send_response_code(conn, opcode,
+							 CGM_SOCP_RSP_INVALID_OPERAND);
+			break;
+		}
+
+		if (data[1] == 0 || data[1] > 60) {
+			cgm_cgms_socp_send_response_code(conn, opcode,
+							 CGM_SOCP_RSP_PARAMETER_OUT_OF_RANGE);
+			break;
+		}
+
+		cgm_comm_interval_min = data[1];
+		cgm_cgms_socp_send_response_code(conn, opcode, CGM_SOCP_RSP_SUCCESS);
+		break;
+
+	case CGM_SOCP_OP_GET_COMM_INTERVAL:
+		cgm_socp_indicate_buffer[0] = CGM_SOCP_OP_COMM_INTERVAL_RSP;
+		cgm_socp_indicate_buffer[1] = cgm_comm_interval_min;
+		cgm_cgms_socp_send_indication(conn, cgm_socp_indicate_buffer, 2);
+		break;
+
+	case CGM_SOCP_OP_START_SESSION:
+		cgm_session_running = true;
+		k_delayed_work_submit(&cgm_meas_work, K_SECONDS(1));
+		cgm_cgms_socp_send_response_code(conn, opcode, CGM_SOCP_RSP_SUCCESS);
+		break;
+
+	case CGM_SOCP_OP_STOP_SESSION:
+		if (!cgm_session_running) {
+			cgm_cgms_socp_send_response_code(conn, opcode,
+							 CGM_SOCP_RSP_OP_CODE_NOT_SUPPORTED);
+			break;
+		}
+
+		cgm_session_running = false;
+		k_delayed_work_cancel(&cgm_meas_work);
+		cgm_cgms_socp_send_response_code(conn, opcode, CGM_SOCP_RSP_SUCCESS);
+		break;
+
+	default:
+		cgm_cgms_socp_send_response_code(conn, opcode,
+						     CGM_SOCP_RSP_OP_CODE_NOT_SUPPORTED);
+		break;
+	}
+
+	return len;
+}
+
+/**
+ * @brief 处理 RACP 写请求（CGMS v1.0.1, §3.6 完整实现）。
+ *
+ * @param conn   当前连接对象。
+ * @param attr   当前属性对象。
+ * @param buf    输入命令缓冲区。
+ * @param len    输入命令长度。
+ * @param offset 写入偏移。
+ * @param flags  ATT 写标志。
+ * @return 成功返回写入字节数，失败返回 BT_GATT_ERR 错误码。
+ *
+ * @details
+ * 支持的 OpCode（M = 规范 Mandatory）：
+ *  - 0x01 Report Stored Records       (M)  — All / ≥ / ≤ / within range
+ *  - 0x03 Abort Operation             (M)  — 停止进行中的操作
+ *  - 0x04 Report Number of Records    (M)  — All / ≥ / ≤ / within range
+ */
+static ssize_t cgm_cgms_racp_write_cb(struct bt_conn *conn,
+				  const struct bt_gatt_attr *attr,
+				  const void *buf, uint16_t len,
+				  uint16_t offset, uint8_t flags)
+{
+	const uint8_t *data = buf;
+	uint8_t opcode;
+	uint8_t oper;
+
+	ARG_UNUSED(attr);
+	ARG_UNUSED(flags);
+
+	if (offset != 0 || len < 1) {
+		return BT_GATT_ERR(BT_ATT_ERR_INVALID_OFFSET);
+	}
+
+	if (!cgm_cgms_racp_indicate_enabled) {
+		return BT_GATT_ERR(BT_ATT_ERR_CCC_IMPROPER_CONF);
+	}
+
+	opcode = data[0];
+
+	/* ---- Abort 始终受理，即使有操作进行中 ---- */
+	if (opcode == CGM_RACP_OP_ABORT_OPERATION) {
+		if (cgm_racp_in_progress) {
+			cgm_racp_abort_req = true;
+			/* work 会在下次执行时检测到 abort_req 并回包 */
+		} else {
+			cgm_cgms_racp_send_response(conn, opcode, CGM_RACP_RSP_SUCCESS);
+		}
+		return len;
+	}
+
+	/* ---- 拒绝在操作进行中写入新 OpCode ---- */
+	if (cgm_racp_in_progress) {
+		return BT_GATT_ERR(CGM_ATT_ERR_PROCEDURE_ALREADY_IN_PROGRESS);
+	}
+
+	if (len < 2) {
+		cgm_cgms_racp_send_response(conn, opcode, CGM_RACP_RSP_INVALID_OPERATOR);
+		return len;
+	}
+
+	oper = data[1];
+
+	switch (opcode) {
+	case CGM_RACP_OP_REPORT_STORED_RECORDS:
+		/* Report 还需要 Measurement notification 使能 */
+		if (!cgm_cgms_meas_notify_enabled) {
+			return BT_GATT_ERR(BT_ATT_ERR_CCC_IMPROPER_CONF);
+		}
+		/* fall-through: 与 Report Number 共用 Operand 解析 */
+	case CGM_RACP_OP_REPORT_NUM_STORED_RECORDS:
+		switch (oper) {
+		case CGM_RACP_OPERATOR_ALL_RECORDS:
+			cgm_racp_filter_min = 0U;
+			cgm_racp_filter_max = UINT16_MAX;
+			break;
+
+		case CGM_RACP_OPERATOR_GT_EQ:
+			if (len < 5) {
+				cgm_cgms_racp_send_response(conn, opcode,
+							    CGM_RACP_RSP_INVALID_OPERAND);
+				return len;
+			}
+			if (data[2] != CGM_RACP_FILTER_TYPE_TIME_OFFSET) {
+				cgm_cgms_racp_send_response(conn, opcode,
+							    CGM_RACP_RSP_OPERAND_NOT_SUPPORTED);
+				return len;
+			}
+			cgm_racp_filter_min = sys_get_le16(&data[3]);
+			cgm_racp_filter_max = UINT16_MAX;
+			break;
+
+		case CGM_RACP_OPERATOR_LT_EQ:
+			if (len < 5) {
+				cgm_cgms_racp_send_response(conn, opcode,
+							    CGM_RACP_RSP_INVALID_OPERAND);
+				return len;
+			}
+			if (data[2] != CGM_RACP_FILTER_TYPE_TIME_OFFSET) {
+				cgm_cgms_racp_send_response(conn, opcode,
+							    CGM_RACP_RSP_OPERAND_NOT_SUPPORTED);
+				return len;
+			}
+			cgm_racp_filter_min = 0U;
+			cgm_racp_filter_max = sys_get_le16(&data[3]);
+			break;
+
+		case CGM_RACP_OPERATOR_WITHIN_RANGE:
+			if (len < 7) {
+				cgm_cgms_racp_send_response(conn, opcode,
+							    CGM_RACP_RSP_INVALID_OPERAND);
+				return len;
+			}
+			if (data[2] != CGM_RACP_FILTER_TYPE_TIME_OFFSET) {
+				cgm_cgms_racp_send_response(conn, opcode,
+							    CGM_RACP_RSP_OPERAND_NOT_SUPPORTED);
+				return len;
+			}
+			cgm_racp_filter_min = sys_get_le16(&data[3]);
+			cgm_racp_filter_max = sys_get_le16(&data[5]);
+			if (cgm_racp_filter_min > cgm_racp_filter_max) {
+				cgm_cgms_racp_send_response(conn, opcode,
+							    CGM_RACP_RSP_INVALID_OPERAND);
+				return len;
+			}
+			break;
+
+		default:
+			cgm_cgms_racp_send_response(conn, opcode,
+						    CGM_RACP_RSP_OPERATOR_NOT_SUPPORTED);
+			return len;
+		}
+
+		cgm_racp_req_opcode   = opcode;
+		cgm_racp_req_operator = oper;
+		cgm_racp_in_progress  = true;
+		cgm_racp_abort_req    = false;
+		k_delayed_work_submit(&cgm_racp_work, K_NO_WAIT);
+		break;
+
+	default:
+		cgm_cgms_racp_send_response(conn, opcode, CGM_RACP_RSP_OP_NOT_SUPPORTED);
+		break;
+	}
+
+	return len;
+}
+
+/**
+ * @brief Measurement CCC 变化回调。
+ *
+ * @param attr  当前属性对象。
+ * @param value 新 CCC 值。
+ * @return 无返回值。
+ */
+static void cgm_cgms_meas_ccc_changed_cb(const struct bt_gatt_attr *attr,
+					 uint16_t value)
+{
+	ARG_UNUSED(attr);
+	cgm_cgms_meas_notify_enabled = (value == BT_GATT_CCC_NOTIFY) ? 1U : 0U;
+
+	if (!cgm_cgms_meas_notify_enabled) {
+		k_delayed_work_cancel(&cgm_meas_work);
+	}
+}
+
+/**
+ * @brief RACP CCC 变化回调。
+ *
+ * @param attr  当前属性对象。
+ * @param value 新 CCC 值。
+ * @return 无返回值。
+ */
+static void cgm_cgms_racp_ccc_changed_cb(const struct bt_gatt_attr *attr,
+					 uint16_t value)
+{
+	ARG_UNUSED(attr);
+	cgm_cgms_racp_indicate_enabled = (value == BT_GATT_CCC_INDICATE) ? 1U : 0U;
+}
+
+/**
+ * @brief SOCP CCC 变化回调。
+ *
+ * @param attr  当前属性对象。
+ * @param value 新 CCC 值。
+ * @return 无返回值。
+ */
+static void cgm_cgms_socp_ccc_changed_cb(const struct bt_gatt_attr *attr,
+					 uint16_t value)
+{
+	ARG_UNUSED(attr);
+	cgm_cgms_socp_indicate_enabled = (value == BT_GATT_CCC_INDICATE) ? 1U : 0U;
+}
+
+/* ========== DIS 回调 ========== */
+/**
+ * @brief 读取 DIS Manufacturer Name。
+ *
+ * @param conn   当前连接对象。
+ * @param attr   当前属性对象。
+ * @param buf    输出缓冲区。
+ * @param len    输出缓冲区长度。
+ * @param offset 读取偏移。
+ * @return 实际返回字节数，或 BT_GATT_ERR 错误码。
+ */
+static ssize_t cgm_dis_manufacturer_name_read_cb(struct bt_conn *conn,
+						 const struct bt_gatt_attr *attr,
+						 void *buf, uint16_t len,
+						 uint16_t offset)
+{
+	const char *value = "Actions";
+	return bt_gatt_attr_read(conn, attr, buf, len, offset, value, strlen(value));
+}
+
+/**
+ * @brief 读取 DIS Model Number。
+ *
+ * @param conn   当前连接对象。
+ * @param attr   当前属性对象。
+ * @param buf    输出缓冲区。
+ * @param len    输出缓冲区长度。
+ * @param offset 读取偏移。
+ * @return 实际返回字节数，或 BT_GATT_ERR 错误码。
+ */
+static ssize_t cgm_dis_model_number_read_cb(struct bt_conn *conn,
+					    const struct bt_gatt_attr *attr,
+					    void *buf, uint16_t len,
+					    uint16_t offset)
+{
+	const char *value = "ATB1119G-CGM";
+	return bt_gatt_attr_read(conn, attr, buf, len, offset, value, strlen(value));
+}
+
+/**
+ * @brief 读取 DIS System ID。
+ *
+ * @param conn   当前连接对象。
+ * @param attr   当前属性对象。
+ * @param buf    输出缓冲区。
+ * @param len    输出缓冲区长度。
+ * @param offset 读取偏移。
+ * @return 实际返回字节数，或 BT_GATT_ERR 错误码。
+ */
+static ssize_t cgm_dis_system_id_read_cb(struct bt_conn *conn,
+					 const struct bt_gatt_attr *attr,
+					 void *buf, uint16_t len,
+					 uint16_t offset)
+{
+	static const uint8_t value[8] = {0x11, 0x19, 0x00, 0xFE, 0x00, 0x03, 0x26, 0x01};
+	return bt_gatt_attr_read(conn, attr, buf, len, offset, value, sizeof(value));
+}
+
+/* ========== BAS 回调 ========== */
+/**
+ * @brief 读取 BAS Battery Level。
+ *
+ * @param conn   当前连接对象。
+ * @param attr   当前属性对象。
+ * @param buf    输出缓冲区。
+ * @param len    输出缓冲区长度。
+ * @param offset 读取偏移。
+ * @return 实际返回字节数，或 BT_GATT_ERR 错误码。
+ */
+static ssize_t cgm_bas_level_read_cb(struct bt_conn *conn,
+				      const struct bt_gatt_attr *attr,
+				      void *buf, uint16_t len,
+				      uint16_t offset)
+{
+	return bt_gatt_attr_read(conn, attr, buf, len, offset,
+				 &cgm_battery_level_percent, sizeof(cgm_battery_level_percent));
+}
+
+/**
+ * @brief BAS Battery Level CCC 变化回调。
+ *
+ * @param attr  当前属性对象。
+ * @param value 新 CCC 值。
+ * @return 无返回值。
+ */
+static void cgm_bas_level_ccc_changed_cb(const struct bt_gatt_attr *attr,
+					 uint16_t value)
+{
+	ARG_UNUSED(attr);
+	cgm_bas_notify_enabled = (value == BT_GATT_CCC_NOTIFY) ? 1U : 0U;
+}
+
+/* ========== CGM Measurement 报文辅助宏和编码函数 ========== */
+
+/* Flags位定义（CGMS v1.0.1, §3.1.1.2） */
+#define CGM_MEAS_FLAG_TREND_PRESENT                  BIT(0)
+#define CGM_MEAS_FLAG_QUALITY_PRESENT                BIT(1)
+#define CGM_MEAS_FLAG_STATUS_OCTET_PRESENT           BIT(5)
+#define CGM_MEAS_FLAG_CAL_TEMP_OCTET_PRESENT         BIT(6)
+#define CGM_MEAS_FLAG_WARNING_OCTET_PRESENT          BIT(7)
+
+/*
+ * CGM Glucose Concentration 使用 SFLOAT（16-bit: 4-bit exponent + 12-bit mantissa）。
+ * 当前演示数据使用 mg/dL 整数值，因此 exponent 固定为 0。
+ */
+static uint16_t cgm_encode_sfloat(int16_t mantissa, int8_t exponent)
+{
+	uint16_t exp = ((uint8_t)exponent) & 0x0F;
+	uint16_t man = ((uint16_t)mantissa) & 0x0FFF;
+
+	return (uint16_t)((exp << 12) | man);
+}
+
+/* ========== 数据库操作 ========== */
+
+/**
+ * @brief 向测量记录数据库压入一条记录。
+ *
+ * @param time_offset    relative time (minutes) since session start.
+ * @param glucose_sfloat SFLOAT-encoded concentration (mg/dL).
+ * @param status         Sensor Status Annunciation bytes [Status, Cal/Temp, Warning].
+ *
+ * @details 若数据库已满则覆盖最旧记录（环形缓冲语义）。
+ */
+static void cgm_db_push(uint16_t time_offset, uint16_t glucose_sfloat,
+			const uint8_t status[3])
+{
+	uint16_t idx;
+
+	if (cgm_db_count < CGM_DB_MAX_RECORDS) {
+		idx = (cgm_db_head + cgm_db_count) % CGM_DB_MAX_RECORDS;
+		cgm_db_count++;
+	} else {
+		/* 满时覆盖最旧记录，head 前进 */
+		idx = cgm_db_head;
+		cgm_db_head = (cgm_db_head + 1U) % CGM_DB_MAX_RECORDS;
+	}
+
+	cgm_db[idx].time_offset    = time_offset;
+	cgm_db[idx].glucose_sfloat = glucose_sfloat;
+	memcpy(cgm_db[idx].status, status, 3U);
+}
+
+/**
+ * @brief 从数据库记录重建 CGM Measurement 报文。
+ *
+ * @param packet   输出缓冲区。
+ * @param capacity 输出缓冲区可写字节数。
+ * @param rec      数据库记录指针。
+ * @return 报文实际长度；0 表示缓冲区过小。
+ */
+static uint16_t cgm_build_meas_packet_from_db(uint8_t *packet, uint16_t capacity,
+					      const struct cgm_db_record *rec)
+{
+	uint8_t  flags = 0U;
+	uint16_t index = 0U;
+
+	if (capacity < 6U) {
+		return 0U;
+	}
+
+	if (rec->status[0] != 0U) { flags |= CGM_MEAS_FLAG_STATUS_OCTET_PRESENT; }
+	if (rec->status[1] != 0U) { flags |= CGM_MEAS_FLAG_CAL_TEMP_OCTET_PRESENT; }
+	if (rec->status[2] != 0U) { flags |= CGM_MEAS_FLAG_WARNING_OCTET_PRESENT; }
+
+	packet[index++] = 0U;   /* size: filled at end */
+	packet[index++] = flags;
+	sys_put_le16(rec->glucose_sfloat, &packet[index]); index += 2U;
+	sys_put_le16(rec->time_offset,    &packet[index]); index += 2U;
+
+	if (flags & CGM_MEAS_FLAG_STATUS_OCTET_PRESENT)   { packet[index++] = rec->status[0]; }
+	if (flags & CGM_MEAS_FLAG_CAL_TEMP_OCTET_PRESENT) { packet[index++] = rec->status[1]; }
+	if (flags & CGM_MEAS_FLAG_WARNING_OCTET_PRESENT)  { packet[index++] = rec->status[2]; }
+
+	if (index > capacity || index > UINT8_MAX) {
+		return 0U;
+	}
+
+	packet[0] = (uint8_t)index;
+	return index;
+}
+
+/**
+ * @brief 通过 RACP indication 发送响应。
+ *
+ * @param conn      当前连接对象。
+ * @param data      载荷。
+ * @param data_len  载荷长度（≤ sizeof(cgm_racp_indicate_buffer)）。
+ */
+static void cgm_cgms_racp_send_indication(struct bt_conn *conn,
+					  const uint8_t *data, uint16_t data_len)
+{
+	if (data_len > sizeof(cgm_racp_indicate_buffer)) {
+		return;
+	}
+
+	memcpy(cgm_racp_indicate_buffer, data, data_len);
+	cgm_racp_indicate_params.attr    = &attr_cgm_cgms_svc[CGM_CGMS_RACP_HDL];
+	cgm_racp_indicate_params.data    = cgm_racp_indicate_buffer;
+	cgm_racp_indicate_params.len     = data_len;
+	cgm_racp_indicate_params.func    = NULL;
+	cgm_racp_indicate_params.destroy = NULL;
+	bt_gatt_indicate(conn, &cgm_racp_indicate_params);
+}
+
+/**
+ * @brief 发送标准 RACP Response Code indication。
+ *
+ * @param conn       当前连接对象。
+ * @param req_opcode 请求操作码（填入 Operand[0]）。
+ * @param rsp_code   响应码（填入 Operand[1]）。
+ */
+static void cgm_cgms_racp_send_response(struct bt_conn *conn,
+					uint8_t req_opcode, uint8_t rsp_code)
+{
+	uint8_t rsp[4] = {
+		CGM_RACP_OP_RESPONSE_CODE,
+		CGM_RACP_OPERATOR_NULL,
+		req_opcode,
+		rsp_code,
+	};
+
+	cgm_cgms_racp_send_indication(conn, rsp, sizeof(rsp));
+}
+
+/**
+ * @brief RACP 异步报告工作项回调。
+ *
+ * @details
+ * 在独立工作项上下文内完成：
+ *  - Report Number of Stored Records：统计匹配条数后发 indication。
+ *  - Report Stored Records：依次 notify 匹配记录，结束后指示 Success 或 No Records Found。
+ *  - Abort：接到中止请求时终止迭代并回 Success。
+ */
+static void cgm_racp_report_work_cb(struct k_work *work)
+{
+	uint16_t i;
+	uint16_t matched = 0U;
+	uint8_t  pkt[9];
+	uint16_t pkt_len;
+
+	ARG_UNUSED(work);
+
+	if (!cgm_active_conn || !cgm_racp_in_progress) {
+		return;
+	}
+
+	/* ---- Abort 优先处理 ---- */
+	if (cgm_racp_abort_req) {
+		cgm_racp_abort_req   = false;
+		cgm_racp_in_progress = false;
+		cgm_cgms_racp_send_response(cgm_active_conn,
+					    CGM_RACP_OP_ABORT_OPERATION,
+					    CGM_RACP_RSP_SUCCESS);
+		return;
+	}
+
+	/* ---- Report Number of Stored Records ---- */
+	if (cgm_racp_req_opcode == CGM_RACP_OP_REPORT_NUM_STORED_RECORDS) {
+		uint16_t count = 0U;
+		uint8_t  rsp[4];
+
+		for (i = 0U; i < cgm_db_count; i++) {
+			const struct cgm_db_record *rec =
+				&cgm_db[(cgm_db_head + i) % CGM_DB_MAX_RECORDS];
+			uint16_t t = rec->time_offset;
+			bool m = false;
+
+			switch (cgm_racp_req_operator) {
+			case CGM_RACP_OPERATOR_ALL_RECORDS:    m = true; break;
+			case CGM_RACP_OPERATOR_GT_EQ:          m = (t >= cgm_racp_filter_min); break;
+			case CGM_RACP_OPERATOR_LT_EQ:          m = (t <= cgm_racp_filter_max); break;
+			case CGM_RACP_OPERATOR_WITHIN_RANGE:
+				m = (t >= cgm_racp_filter_min && t <= cgm_racp_filter_max); break;
+			default: break;
+			}
+			if (m) { count++; }
+		}
+
+		rsp[0] = CGM_RACP_OP_NUM_STORED_RECORDS_RSP;
+		rsp[1] = CGM_RACP_OPERATOR_NULL;
+		sys_put_le16(count, &rsp[2]);
+		cgm_cgms_racp_send_indication(cgm_active_conn, rsp, sizeof(rsp));
+		cgm_racp_in_progress = false;
+		return;
+	}
+
+	/* ---- Report Stored Records ---- */
+	for (i = 0U; i < cgm_db_count; i++) {
+		const struct cgm_db_record *rec =
+			&cgm_db[(cgm_db_head + i) % CGM_DB_MAX_RECORDS];
+		uint16_t t   = rec->time_offset;
+		bool matches = false;
+
+		/* 检查 Abort 请求 */
+		if (cgm_racp_abort_req) {
+			break;
+		}
+
+		switch (cgm_racp_req_operator) {
+		case CGM_RACP_OPERATOR_ALL_RECORDS:   matches = true;  break;
+		case CGM_RACP_OPERATOR_GT_EQ:         matches = (t >= cgm_racp_filter_min); break;
+		case CGM_RACP_OPERATOR_LT_EQ:         matches = (t <= cgm_racp_filter_max); break;
+		case CGM_RACP_OPERATOR_WITHIN_RANGE:
+			matches = (t >= cgm_racp_filter_min && t <= cgm_racp_filter_max); break;
+		default: break;
+		}
+
+		if (matches && cgm_cgms_meas_notify_enabled) {
+			pkt_len = cgm_build_meas_packet_from_db(pkt, sizeof(pkt), rec);
+			if (pkt_len > 0U) {
+				bt_gatt_notify(cgm_active_conn,
+					       &attr_cgm_cgms_svc[CGM_CGMS_MEAS_HDL],
+					       pkt, pkt_len);
+				matched++;
+			}
+		}
+	}
+
+	cgm_racp_in_progress = false;
+
+	if (cgm_racp_abort_req) {
+		cgm_racp_abort_req = false;
+		cgm_cgms_racp_send_response(cgm_active_conn,
+					    CGM_RACP_OP_ABORT_OPERATION,
+					    CGM_RACP_RSP_SUCCESS);
+		return;
+	}
+
+	if (matched == 0U) {
+		cgm_cgms_racp_send_response(cgm_active_conn, cgm_racp_req_opcode,
+					    CGM_RACP_RSP_NO_RECORDS_FOUND);
+	} else {
+		cgm_cgms_racp_send_response(cgm_active_conn, cgm_racp_req_opcode,
+					    CGM_RACP_RSP_SUCCESS);
+	}
+}
+
+/*
+ * 组包 CGM Measurement Record：
+ * [Size][Flags][Glucose(SFLOAT,2)][Time Offset(2)][Optional Fields...]
+ */
+static uint16_t cgm_build_measurement_record(uint8_t *packet, uint16_t packet_capacity)
+{
+	uint8_t flags = 0;
+	uint16_t index = 0;
+	uint16_t glucose_sfloat;
+
+	if (packet_capacity < 6U) {
+		return 0U;
+	}
+
+	if (cgm_status_annunciation[0] != 0U) {
+		flags |= CGM_MEAS_FLAG_STATUS_OCTET_PRESENT;
+	}
+
+	if (cgm_status_annunciation[1] != 0U) {
+		flags |= CGM_MEAS_FLAG_CAL_TEMP_OCTET_PRESENT;
+	}
+
+	if (cgm_status_annunciation[2] != 0U) {
+		flags |= CGM_MEAS_FLAG_WARNING_OCTET_PRESENT;
+	}
+
+	packet[index++] = 0U;
+	packet[index++] = flags;
+
+	glucose_sfloat = cgm_encode_sfloat((int16_t)cgm_glucose_mg_dl, 0);
+	sys_put_le16(glucose_sfloat, &packet[index]);
+	index += 2U;
+
+	sys_put_le16(cgm_time_offset_min, &packet[index]);
+	index += 2U;
+
+	if (flags & CGM_MEAS_FLAG_STATUS_OCTET_PRESENT) {
+		packet[index++] = cgm_status_annunciation[0];
+	}
+
+	if (flags & CGM_MEAS_FLAG_CAL_TEMP_OCTET_PRESENT) {
+		packet[index++] = cgm_status_annunciation[1];
+	}
+
+	if (flags & CGM_MEAS_FLAG_WARNING_OCTET_PRESENT) {
+		packet[index++] = cgm_status_annunciation[2];
+	}
+
+	if (index > packet_capacity || index > UINT8_MAX) {
+		return 0U;
+	}
+
+	packet[0] = (uint8_t)index;
+	return index;
+}
+
+/*
+ * @brief CGMS 周期测量任务。
+ *
+ * @details
+ * 1) 在 session running + measurement notify enabled 时发送。
+ * 2) 发送后更新 time offset / run time / battery level。
+ * 3) 当前为演示数据，后续可接真实传感算法。
+ */
+static void cgm_cgms_measurement_work_cb(struct k_work *work)
+{
+	uint8_t packet[9];
+	uint16_t packet_len;
+
+	ARG_UNUSED(work);
+
+	if (!cgm_active_conn || !cgm_cgms_meas_notify_enabled || !cgm_session_running) {
+		return;
+	}
+
+	/* 先入库，保证历史数据可通过 RACP 重放 */
+	cgm_db_push(cgm_time_offset_min,
+		    cgm_encode_sfloat((int16_t)cgm_glucose_mg_dl, 0),
+		    cgm_status_annunciation);
+
+	packet_len = cgm_build_measurement_record(packet, sizeof(packet));
+	if (packet_len == 0U) {
+		return;
+	}
+
+	bt_gatt_notify(cgm_active_conn, &attr_cgm_cgms_svc[CGM_CGMS_MEAS_HDL],
+		       packet, packet_len);
+
+	cgm_time_offset_min += cgm_comm_interval_min;
+	cgm_session_run_time_min += cgm_comm_interval_min;
+	cgm_glucose_mg_dl = (cgm_glucose_mg_dl < 160) ? (cgm_glucose_mg_dl + 1U) : 105U;
+
+	if (cgm_bas_notify_enabled && cgm_battery_level_percent > 0) {
+		cgm_battery_level_percent--;
+		bt_gatt_notify(cgm_active_conn, &attr_cgm_bas_svc[CGM_BAS_LEVEL_HDL],
+			       &cgm_battery_level_percent,
+			       sizeof(cgm_battery_level_percent));
+	}
+
+	k_delayed_work_submit(&cgm_meas_work, K_SECONDS(cgm_comm_interval_min));
+}
+
+/*
+ * Legacy custom service definition.
+ */
+BT_GATT_SERVICE_DEFINE(super_svc,
+	BT_GATT_PRIMARY_SERVICE((void *)&cgm_legacy_svc_uuid),
+
+	BT_GATT_CHARACTERISTIC(&cgm_legacy_test_uuid.uuid,
+				BT_GATT_CHRC_NOTIFY | BT_GATT_CHRC_WRITE, 
+				BT_GATT_PERM_WRITE, NULL, cgm_legacy_test_write_cb, NULL),
+	BT_GATT_CCC(cgm_legacy_test_ccc_cfg_changed,
+			BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
+);
+
+/*
+ * Standard CGMS service definition.
+ */
+BT_GATT_SERVICE_DEFINE(cgm_cgms_svc,
+	BT_GATT_PRIMARY_SERVICE(BT_UUID_DECLARE_16(CGM_CGMS_SERVICE_UUID_VAL)),
+
+	BT_GATT_CHARACTERISTIC(BT_UUID_DECLARE_16(CGM_CGMS_MEAS_UUID_VAL),
+		BT_GATT_CHRC_NOTIFY,
+		BT_GATT_PERM_NONE,
+		NULL, NULL, NULL),
+	BT_GATT_CCC(cgm_cgms_meas_ccc_changed_cb, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE_ENCRYPT),
+
+	BT_GATT_CHARACTERISTIC(BT_UUID_DECLARE_16(CGM_CGMS_FEATURE_UUID_VAL),
+		BT_GATT_CHRC_READ,
+		BT_GATT_PERM_READ,
+		cgm_cgms_feature_read_cb, NULL, NULL),
+
+	BT_GATT_CHARACTERISTIC(BT_UUID_DECLARE_16(CGM_CGMS_STATUS_UUID_VAL),
+		BT_GATT_CHRC_READ,
+		BT_GATT_PERM_READ,
+		cgm_cgms_status_read_cb, NULL, NULL),
+
+	BT_GATT_CHARACTERISTIC(BT_UUID_DECLARE_16(CGM_CGMS_SESSION_START_UUID_VAL),
+		BT_GATT_CHRC_READ | BT_GATT_CHRC_WRITE,
+		BT_GATT_PERM_READ | BT_GATT_PERM_WRITE_ENCRYPT,
+		cgm_cgms_session_start_read_cb, cgm_cgms_session_start_write_cb, NULL),
+
+	BT_GATT_CHARACTERISTIC(BT_UUID_DECLARE_16(CGM_CGMS_SESSION_RUN_TIME_UUID_VAL),
+		BT_GATT_CHRC_READ,
+		BT_GATT_PERM_READ,
+		cgm_cgms_session_run_time_read_cb, NULL, NULL),
+
+	BT_GATT_CHARACTERISTIC(BT_UUID_DECLARE_16(CGM_CGMS_RACP_UUID_VAL),
+		BT_GATT_CHRC_WRITE | BT_GATT_CHRC_INDICATE,
+		BT_GATT_PERM_WRITE_ENCRYPT,
+		NULL, cgm_cgms_racp_write_cb, NULL),
+	BT_GATT_CCC(cgm_cgms_racp_ccc_changed_cb, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
+
+	BT_GATT_CHARACTERISTIC(BT_UUID_DECLARE_16(CGM_CGMS_SOCP_UUID_VAL),
+		BT_GATT_CHRC_WRITE | BT_GATT_CHRC_INDICATE,
+		BT_GATT_PERM_WRITE_ENCRYPT,
+		NULL, cgm_cgms_socp_write_cb, NULL),
+	BT_GATT_CCC(cgm_cgms_socp_ccc_changed_cb, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
+);
+
+/* Device Information Service definition */
+BT_GATT_SERVICE_DEFINE(cgm_dis_svc,
+	BT_GATT_PRIMARY_SERVICE(BT_UUID_DIS),
+
+	BT_GATT_CHARACTERISTIC(BT_UUID_DIS_MANUFACTURER_NAME,
+		BT_GATT_CHRC_READ,
+		BT_GATT_PERM_READ,
+		cgm_dis_manufacturer_name_read_cb, NULL, NULL),
+
+	BT_GATT_CHARACTERISTIC(BT_UUID_DIS_MODEL_NUMBER,
+		BT_GATT_CHRC_READ,
+		BT_GATT_PERM_READ,
+		cgm_dis_model_number_read_cb, NULL, NULL),
+
+	BT_GATT_CHARACTERISTIC(BT_UUID_DIS_SYSTEM_ID,
+		BT_GATT_CHRC_READ,
+		BT_GATT_PERM_READ,
+		cgm_dis_system_id_read_cb, NULL, NULL),
+);
+
+/* Battery Service definition */
+BT_GATT_SERVICE_DEFINE(cgm_bas_svc,
+	BT_GATT_PRIMARY_SERVICE(BT_UUID_BAS),
+
+	BT_GATT_CHARACTERISTIC(BT_UUID_BAS_BATTERY_LEVEL,
+		BT_GATT_CHRC_READ | BT_GATT_CHRC_NOTIFY,
+		BT_GATT_PERM_READ,
+		cgm_bas_level_read_cb, NULL, NULL),
+	BT_GATT_CCC(cgm_bas_level_ccc_changed_cb, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
+);
+
+/**
+ * @brief 查询 Legacy 服务指定句柄的通知使能状态。
+ *
+ * @param conn   当前连接对象（当前实现未使用）。
+ * @param handle 属性句柄索引。
+ * @return 1 表示已使能；0 表示未使能或不支持。
+ */
+uint8_t cgm_ble_super_ccc_enabled(struct bt_conn *conn, uint8_t handle)
+{
+	ARG_UNUSED(conn);
+
+	/*
+	 * 兼容 API 当前只在 legacy 数据链路中使用。
+	 * 如需查询 CGMS/BAS 的 CCC 状态，建议新增专用查询接口，
+	 * 避免跨服务句柄索引（都从 0 开始）产生歧义。
+	 */
+	if (handle == CGM_LEGACY_TEST_HDL) {
+		return cgm_legacy_notify_enabled;
+	}
+
+	return 0;
+}
+
+/**
+ * @brief 旧接口兼容：查询 CCC 状态。
+ *
+ * @param conn   当前连接对象。
+ * @param handle 属性句柄索引。
+ * @return 1 表示已使能；0 表示未使能或不支持。
+ */
+uint8_t ble_super_ccc_enabled(struct bt_conn *conn, uint8_t handle)
+{
+	return cgm_ble_super_ccc_enabled(conn, handle);
+}
+
+/**
+ * @brief 发送 Legacy 服务 notify。
+ *
+ * @param conn    当前连接对象。
+ * @param index   Legacy 服务属性索引。
+ * @param len     发送数据长度。
+ * @param p_value 发送数据指针。
+ * @return 无返回值。
+ */
+void cgm_ble_super_send_notify(struct bt_conn *conn, uint8_t index,
+			       uint16_t len, uint8_t *p_value)
+{
+	bt_gatt_notify(conn, &attr_super_svc[index], p_value, len);
+}
+
+/**
+ * @brief 旧接口兼容：发送 Legacy notify。
+ *
+ * @param conn    当前连接对象。
+ * @param index   属性索引。
+ * @param len     数据长度。
+ * @param p_value 数据指针。
+ * @return 无返回值。
+ */
+void ble_super_send_notify(struct bt_conn *conn, uint8_t index, uint16_t len, uint8_t *p_value)
+{
+	cgm_ble_super_send_notify(conn, index, len, p_value);
+}
+
+/**
+ * @brief 服务层初始化。
+ *
+ * @param 无。
+ * @return 无返回值。
+ *
+ * @details
+ * 负责初始化测量周期任务队列，需在 BLE 协议栈使能后调用一次。
+ */
+void cgm_ble_super_service_init(void)
+{
+	k_delayed_work_init(&cgm_meas_work, cgm_cgms_measurement_work_cb);
+	k_delayed_work_init(&cgm_racp_work,  cgm_racp_report_work_cb);
+}
+
+/**
+ * @brief 旧接口兼容：服务初始化。
+ *
+ * @param 无。
+ * @return 无返回值。
+ */
+void ble_super_service_init(void)
+{
+	cgm_ble_super_service_init();
+}
+
+/**
+ * @brief 服务层连接建立入口。
+ *
+ * @param conn 新建立的连接对象。
+ * @return 无返回值。
+ *
+ * @details
+ * 保存连接引用供 CGMS/BAS 通知使用；若已有旧连接引用会先释放。
+ */
+void cgm_ble_super_on_connected(struct bt_conn *conn)
+{
+	if (cgm_active_conn) {
+		bt_conn_unref(cgm_active_conn);
+	}
+
+	cgm_active_conn = bt_conn_ref(conn);
+}
+
+/**
+ * @brief 旧接口兼容：连接建立入口。
+ *
+ * @param conn 新建立的连接对象。
+ * @return 无返回值。
+ */
+void ble_super_on_connected(struct bt_conn *conn)
+{
+	cgm_ble_super_on_connected(conn);
+}
+
+/**
+ * @brief 服务层连接断开入口。
+ *
+ * @param conn 断开的连接对象。
+ * @return 无返回值。
+ *
+ * @details
+ * 断开后会取消测量任务、释放连接引用并复位会话运行状态。
+ */
+void cgm_ble_super_on_disconnected(struct bt_conn *conn)
+{
+	if (!cgm_active_conn || cgm_active_conn != conn) {
+		return;
+	}
+
+	k_delayed_work_cancel(&cgm_meas_work);
+	k_delayed_work_cancel(&cgm_racp_work);
+	cgm_racp_in_progress = false;
+	cgm_racp_abort_req   = false;
+	bt_conn_unref(cgm_active_conn);
+	cgm_active_conn = NULL;
+	cgm_session_running = false;
+}
+
+/**
+ * @brief 旧接口兼容：连接断开入口。
+ *
+ * @param conn 断开的连接对象。
+ * @return 无返回值。
+ */
+void ble_super_on_disconnected(struct bt_conn *conn)
+{
+	cgm_ble_super_on_disconnected(conn);
+}

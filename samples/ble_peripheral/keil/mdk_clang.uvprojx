@@ -469,6 +469,51 @@
               <FilePath>..\src\actions\ble_super_service.c</FilePath>
             </File>
             <File>
+              <FileName>cgms_state.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\src\actions\cgms\cgms_state.c</FilePath>
+            </File>
+            <File>
+              <FileName>cgm_feature.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\src\actions\cgms\cgm_feature.c</FilePath>
+            </File>
+            <File>
+              <FileName>cgm_status.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\src\actions\cgms\cgm_status.c</FilePath>
+            </File>
+            <File>
+              <FileName>cgm_session.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\src\actions\cgms\cgm_session.c</FilePath>
+            </File>
+            <File>
+              <FileName>cgm_meas.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\src\actions\cgms\cgm_meas.c</FilePath>
+            </File>
+            <File>
+              <FileName>cgm_racp.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\src\actions\cgms\cgm_racp.c</FilePath>
+            </File>
+            <File>
+              <FileName>cgm_socp.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\src\actions\cgms\cgm_socp.c</FilePath>
+            </File>
+            <File>
+              <FileName>cgm_bas.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\src\actions\cgms\cgm_bas.c</FilePath>
+            </File>
+            <File>
+              <FileName>cgm_dis.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\src\actions\cgms\cgm_dis.c</FilePath>
+            </File>
+            <File>
               <FileName>msg_manager.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\src\main\msg_manager.c</FilePath>

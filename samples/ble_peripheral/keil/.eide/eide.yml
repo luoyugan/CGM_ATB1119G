@@ -13,6 +13,15 @@ virtualFolder:
         - path: ../src/main/main.c
         - path: ../src/actions/bt_le_op.c
         - path: ../src/actions/ble_super_service.c
+        - path: ../src/actions/cgms/cgms_state.c
+        - path: ../src/actions/cgms/cgm_feature.c
+        - path: ../src/actions/cgms/cgm_status.c
+        - path: ../src/actions/cgms/cgm_session.c
+        - path: ../src/actions/cgms/cgm_meas.c
+        - path: ../src/actions/cgms/cgm_racp.c
+        - path: ../src/actions/cgms/cgm_socp.c
+        - path: ../src/actions/cgms/cgm_bas.c
+        - path: ../src/actions/cgms/cgm_dis.c
         - path: ../src/main/msg_manager.c
         - path: ../src/main/system_app_wdg.c
         - path: ../src/actions/ble_data_test_sample.c
@@ -225,6 +234,7 @@ targets:
       defineList: []
       incList:
         - ../src/include
+        - ../src/actions
         - ../../../include/rbuf
         - .cmsis/include
         - RTE/_zephyr
