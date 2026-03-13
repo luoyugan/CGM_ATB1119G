@@ -17,10 +17,17 @@ ssize_t cgm_cgms_feature_read_cb(struct bt_conn *conn,
 				  void *buf, uint16_t len,
 				  uint16_t offset)
 {
-	uint8_t value[3];
+	/*
+	 * CGM Feature 特征格式（CGMS v1.0.1 §3.2，共 4 字节）：
+	 *   Octet 0-2: CGM Feature（24 bit，小端序）
+	 *   Octet 3:   Type（高 4 bit）| Sample Location（低 4 bit）
+	 */
+	uint8_t value[4];
 
-	sys_put_le16(cgm_feature_flags, value);
-	value[2] = cgm_type_sample_location;
+	value[0] = (uint8_t)(cgm_feature_flags);
+	value[1] = (uint8_t)(cgm_feature_flags >> 8);
+	value[2] = (uint8_t)(cgm_feature_flags >> 16);
+	value[3] = cgm_type_sample_location;
 
 	return bt_gatt_attr_read(conn, attr, buf, len, offset, value, sizeof(value));
 }

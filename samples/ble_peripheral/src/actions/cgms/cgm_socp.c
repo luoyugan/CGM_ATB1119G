@@ -17,6 +17,8 @@
 #include "cgms_defs.h"
 #include "cgms_state.h"
 #include "cgm_meas.h"
+#include "cgm_status.h"
+#include "cgm_session.h"
 
 /* ========== 私有 indication 缓冲 ========== */
 static struct bt_gatt_indicate_params cgm_socp_indicate_params;
@@ -99,7 +101,14 @@ ssize_t cgm_cgms_socp_write_cb(struct bt_conn *conn,
 		break;
 
 	case CGM_SOCP_OP_START_SESSION:
+		cgm_db_count = 0U;
+		cgm_db_head = 0U;
+		memset(cgm_db, 0, sizeof(cgm_db));
+		cgm_time_offset_min = 0U;
+		cgm_session_run_time_min = 0U;
+		cgm_session_clear_start_time();
 		cgm_meas_start();
+		cgm_status_set_session_stopped(false);
 		cgm_cgms_socp_send_response_code(conn, opcode, CGM_SOCP_RSP_SUCCESS);
 		break;
 
@@ -110,6 +119,7 @@ ssize_t cgm_cgms_socp_write_cb(struct bt_conn *conn,
 			break;
 		}
 		cgm_meas_stop();
+		cgm_status_set_session_stopped(true);
 		cgm_cgms_socp_send_response_code(conn, opcode, CGM_SOCP_RSP_SUCCESS);
 		break;
 

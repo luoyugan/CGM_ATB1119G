@@ -1,0 +1,884 @@
+
+============================== PAGE 41 ==============================
+Continuous Glucose Monitoring Service (CGMS)  /  Test Suite 
+Bluetooth SIG Proprietary Page 41 of 86 
+• Initial Condition 
+Perform the preamble described in in Section 4.2.3. 
+Perform an action on the IUT that will induce it to generate 3 records. 
+• Test Procedure 
+1. The Lower Tester resets to 0 one or both of the Client Characteristic Configuration descriptors 
+from the CGM Measurement characteristic or Record Access Control Point characteristic.  
+2. The Lower Tester writes the ‘Report Stored Records’ Op Code (0x01) to the RACP using an 
+Operator of ‘all records’ (0x01) and no Operand. 
+3. Verify the characteristic value meets the requirements of the service. 
+• Expected Outcome 
+Pass verdict 
+The IUT rejects the Write Request to start the second procedure and responds with an Attribute 
+Protocol Application Error Code set to ‘Client Characteristic Configuration Descriptor Improperly 
+Configured’ (0xFD). 
+4.15 CGM Specific Ops Control Point 
+This test group contains test cases to verify compliant operation when the Lower Tester uses CGM 
+Specific Ops Control Point procedures. 
+CGMS/SEN/CGMCP/BV-01-C [CGM Specific Ops – ‘Get CGM Communication Interval with 
+E2E-CRC’] 
+• Test Purpose 
+Verify that the IUT can perform the ‘Get CGM Communication Interval’ procedure. 
+• Reference 
+[2] 3.7.1, 3.7.2.1 
+• Initial Condition 
+Perform the preamble described in in Section 4.2.4. 
+Both the IUT and the Lower Tester support E2E-CRC safety (Bit 12 ‘E2E-CRC supported’ in CGM 
+Feature flags is set to 1). 
+• Test Procedure 
+1. The Lower Tester writes the ‘Get CGM Communication Interval’ Op Code (0x02) to the CGM 
+Specific Ops Control Point with no operands. 
+2. The IUT sends an indication of the CGM Specific Ops Control Point characteristic with the ‘Get 
+Communication Interval response’ Op Code (0x03) and an Operand representing the 
+communication interval in minutes. 
+3. The Lower Tester receives an ATT_Handle_Value_Indication from the IUT containing the CGM 
+Specific Ops Control Point characteristic handle and value. 
+
+============================== PAGE 42 ==============================
+Continuous Glucose Monitoring Service (CGMS)  /  Test Suite 
+Bluetooth SIG Proprietary Page 42 of 86 
+4. The Lower Tester sends an ATT_Handle_Value_Confirmation to the IUT. 
+5. Verify the characteristic value meets the requirements of the service. 
+• Expected Outcome 
+Pass verdict 
+The IUT sends an indication of the CGM Specific Ops Control Point characteristic with the ‘Get 
+Communication Interval response’ Op Code (0x03) and an Operand representing the communication 
+interval in minutes.  
+The E2E-CRC field is present in CGM Specific Ops Control Point characteristic value. 
+CGMS/SEN/CGMCP/BV-02-C [CGM Specific Ops – ‘Get CGM Communication Interval 
+without E2E-CRC’] 
+• Test Purpose 
+Verify that the IUT can perform the ‘Get CGM Communication Interval’ procedure. 
+• Reference 
+[2] 3.7.1, 3.7.2.1 
+• Initial Condition 
+Perform the preamble described in in Section 4.2.4. 
+Neither the IUT nor the Lower Tester support E2E-CRC safety (Bit 12 ‘E2E-CRC supported’ in CGM 
+Feature flags is set to 0). 
+• Test Procedure 
+1. The Lower Tester writes the ‘Get CGM Communication Interval’ Op Code (0x02) to the CGM 
+Specific Ops Control Point with no operands. 
+2. The IUT sends an indication of the CGM Specific Ops Control Point characteristic with the ‘Get 
+Communication Interval response’ Op Code (0x03) and an Operand representing the 
+communication interval in minutes. 
+3. The Lower Tester receives an ATT_Handle_Value_Indication from the IUT containing the CGM 
+Specific Ops Control Point characteristic handle and value. 
+4. The Lower Tester sends an ATT_Handle_Value_Confirmation to the IUT. 
+5. Verify the characteristic value meets the requirements of the service. 
+• Expected Outcome 
+Pass verdict 
+The IUT sends an indication of the CGM Specific Ops Control Point characteristic with the ‘Get 
+Communication Interval response’ Op Code (0x03) and an Operand representing the communication 
+interval in minutes. 
+The E2E-CRC field is excluded and not present in CGM Specific Ops Control Point characteristic 
+value. 
+
+============================== PAGE 43 ==============================
+Continuous Glucose Monitoring Service (CGMS)  /  Test Suite 
+Bluetooth SIG Proprietary Page 43 of 86 
+4.15.1 CGM Specific Ops – ‘Set CGM Communication Interval’ 
+• Test Purpose 
+Verify that the IUT can perform the ‘Set CGM Communication Interval’ procedure. 
+• Reference 
+[2] 3.7.1, 3.7.2.1 
+• Initial Condition 
+Perform the preamble described in in Section 4.2.4. 
+Both the IUT and the Lower Tester have the same CGM Feature Bit settings concerning E2E -CRC 
+safety (Bit 12 “E2E-CRC supported” is set to 1 or to 0). Setting is found in Table 4.6. 
+• Test Case Configuration 
+Test Case E2E-CRC Value 
+(Requirements) 
+CGMS/SEN/CGMCP/BV-03-C [CGM Specific Ops – ‘Set CGM 
+Communication Interval’ – with E2E-CRC] Bit 12 “E2E-CRC 
+supported” is set to 1 
+CGMS/SEN/CGMCP/BV-26-C [CGM Specific Ops – ‘Set CGM 
+Communication Interval’ – without E2E-CRC] Bit 12 “E2E-CRC 
+supported” is set to 0 
+Table 4.6: CGM Specific OPS - Set CGM Communication Interval test cases 
+• Test Procedure 
+The following test procedure applies to the test cases listed in the table below:  
+1. The Lower Tester writes the ‘Set CGM Communication interval’ Op Code (0x01) to the CGM 
+Specific Ops Control Point with an Operand containing a value which is supported by the device 
+for a communication interval time in minutes (e.g., 0x05 representing 5 minutes). The supported 
+range is defined in the IXIT [7]. 
+2. The IUT sends an indication of the CGM Specific Ops Control Point characteristic with the 
+‘Response Code’ Op Code (0x1C) and an Operand representing the Request Op Code (0x01) 
+followed by the Response Code for ‘Success’ (0x01). 
+3. The Lower Tester receives an ATT_Handle_Value_Indication from the IUT containing the CGM 
+Specific Ops Control Point characteristic handle and value. 
+4. The Lower Tester sends an ATT_Handle_Value_Confirmation to the IUT. 
+5. If E2E-CRC is supported, perform CGMS/SEN/CGMCP/BV-01-C [CGM Specific Ops – ‘Get CGM 
+Communication Interval with E2E-CRC’ to verify that the previous set ‘Communication Time 
+Interval’ is stored in IUT. If E2E-CRC is not supported, perform CGMS/SEN/CGMCP/BV-02-C 
+[CGM Specific Ops – ‘Get CGM Communication Interval without E2E-CRC’] to verify that the 
+previous set ‘Communication Time Interval’ is stored in IUT. 
+6. Verify the characteristic value meets the requirements of the service. 
+
+============================== PAGE 44 ==============================
+Continuous Glucose Monitoring Service (CGMS)  /  Test Suite 
+Bluetooth SIG Proprietary Page 44 of 86 
+• Expected Outcome 
+Pass verdict 
+The IUT sends an indication of the CGM Specific Ops Control Point characteristic with the ‘Response 
+Code’ Op Code (0x1C) and an Operand representing the Request Op Code (0x01) followed by the 
+Response Code for ‘Success’ (0x01). 
+The new Communication interval is stored in IUT as used in step 2. 
+4.15.2 CGM Specific Ops – ‘Set smallest CGM Communication Interval supported by Device’ 
+• Test Purpose 
+Verify that when the IUT performs the ‘Set CGM Communication Interval’ procedure with a 
+communication interval value of 0xFF the communication interval is set to the smallest interval 
+supported by the device. 
+• Reference 
+[2] 3.7.1, 3.7.2.1 
+• Initial Condition 
+Perform the preamble described in Section 4.2.4. 
+The smallest Communication Interval supported by the device is known.  
+Both the IUT and the Lower Tester have the same CGM Feature Bit settings concerning E2E -CRC 
+safety (Bit 12 “E2E-CRC supported” is set to 1 or to 0). Setting is found in Table 4.7. 
+• Test Case Configuration 
+Test Case E2E-CRC Value 
+(Requirements) 
+CGMS/SEN/CGMCP/BV-04-C [CGM Specific Ops – ‘Set smallest CGM 
+Communication Interval supported by Device’ – with E2E-CRC] Bit 12 “E2E-CRC 
+supported” is set to 1 
+CGMS/SEN/CGMCP/BV-27-C [CGM Specific Ops – ‘Set smallest CGM 
+Communication Interval supported by Device’ – without E2E-CRC] Bit 12 “E2E-CRC 
+supported” is set to 0 
+Table 4.7: CGM Specific OPS - Set smallest CGM Communication Interval supported test cases 
+• Test Procedure 
+The following test procedure applies to the test cases listed in the table below: 
+1. The Lower Tester writes the ‘Set CGM Communication Interval’ Op Code (0x01) to the CGM 
+Specific Ops Control Point with an Operand containing the value 0xFF. 
+2. The IUT sends an indication of the CGM Specific Ops Control Point characteristic with the 
+‘Response Code’ Op Code (0x1C) and an Operand representing the Request Op Code (0x01) 
+followed by the Response Code for ‘Success’ (0x01). 
+
+============================== PAGE 45 ==============================
+Continuous Glucose Monitoring Service (CGMS)  /  Test Suite 
+Bluetooth SIG Proprietary Page 45 of 86 
+3. The Lower Tester receives an ATT_Handle_Value_Indication from the IUT containing the CGM 
+Specific Ops Control Point characteristic handle and value. 
+4. The Lower Tester sends an ATT_Handle_Value_Confirmation to the IUT. 
+5. If E2E-CRC is supported, perform CGMS/SEN/CGMCP/BV-01-C [CGM Specific Ops – ‘Get CGM 
+Communication Interval with E2E-CRC’ to verify that the new communication interval is stored in 
+the IUT and set to smallest value supported by the device. If E2E-CRC is not supported, perform 
+CGMS/SEN/CGMCP/BV-02-C [CGM Specific Ops – ‘Get CGM Communication Interval without 
+E2E-CRC’] to verify that the new communication interval is stored in the IUT and set to smallest 
+value supported by the device. 
+6. Verify the characteristic value meets the requirements of the service. 
+• Expected Outcome 
+Pass verdict 
+The IUT sends an indication of the CGM Specific Ops Control Point characteristic with the ‘Response 
+Code’ Op Code (0x1C) and an Operand representing the Request Op Code (0x01) followed by the 
+Response Code for ‘Success’ (0x01). 
+The new Communication interval is stored in IUT and set to the value used by the device, which 
+means the smallest Communication interval supported by the device. 
+4.15.3 CGM Specific Ops – ‘Disable communication interval’ 
+• Test Purpose 
+Verify that the IUT can disable periodic communication when a communication interval value of 0x00 
+is used in the ‘Set CGM Communication Interval’ procedure. 
+• Reference 
+[2] 3.7.1, 3.7.2.1 
+• Initial Condition 
+Perform the preamble described in in Section 4.2.4. 
+Both the IUT and the Lower Tester have the same CGM Feature Bit settings concerning E2E -CRC 
+safety (Bit 12 “E2E-CRC supported” is set to 1 or to 0). Setting is found in Table 4.8. 
+• Test Case Configuration 
+Test Case E2E-CRC Value 
+(Requirements) 
+CGMS/SEN/CGMCP/BV-05-C [CGM Specific Ops – ‘Disable 
+communication interval’ – with E2E-CRC] Bit 12 “E2E-CRC 
+supported” is set to 1 
+CGMS/SEN/CGMCP/BV-28-C [CGM Specific Ops – ‘Disable 
+communication interval’ – without E2E-CRC] Bit 12 “E2E-CRC 
+supported” is set to 0 
+Table 4.8: CGM Specific OPS - Disable Communication Interval supported test cases 
+
+============================== PAGE 46 ==============================
+Continuous Glucose Monitoring Service (CGMS)  /  Test Suite 
+Bluetooth SIG Proprietary Page 46 of 86 
+• Test Procedure 
+1. The Lower Tester writes the ‘Set CGM Communication Interval’ Op Code (0x01) to the CGM 
+Specific Ops Control Point with an Operand containing the value 0x00. 
+2. The IUT sends an indication of the CGM Specific Ops Control Point characteristic with the 
+‘Response Code’ Op Code (0x1C) and an Operand representing the Request Op Code (0x01) 
+followed by the Response Code for ‘Success’ (0x01). 
+3. The Lower Tester receives an ATT_Handle_Value_Indication from the IUT containing the CGM 
+Specific Ops Control Point characteristic handle and value. 
+4. The Lower Tester sends an ATT_Handle_Value_Confirmation to the IUT. 
+5. If E2E-CRC is supported, perform CGMS/SEN/CGMCP/BV-01-C [CGM Specific Ops – ‘Get CGM 
+Communication Interval with E2E-CRC’ to verify that the new communication interval is stored in 
+the IUT and is set to 0x00. If E2E-CRC is not supported, perform CGMS/SEN/CGMCP/BV-02-C 
+[CGM Specific Ops – ‘Get CGM Communication Interval without E2E-CRC’] to verify that the new 
+communication interval is stored in the IUT and is set to 0x00. 
+6. Verify the characteristic value meets the requirements of the service. 
+• Expected Outcome 
+Pass verdict 
+The IUT sends an indication of the CGM Specific Ops Control Point characteristic with the ‘Response 
+Code’ Op Code (0x1C) and an Operand representing the Request Op Code (0x01) followed by the 
+Response Code for ‘Success’ (0x01). 
+The new Communication interval is stored in IUT and set to 0x00. 
+CGMS/SEN/CGMCP/BV-06-C [CGM Specific Ops – ‘Get Glucose Calibration Value’ Type 
+1] 
+• Test Purpose 
+Verify that the IUT can perform the ‘Get Glucose Calibration value’ procedure. 
+• Reference 
+[2] 3.7.1, 3.7.2.2 
+• Initial Condition 
+Perform the preamble described in in Section 4.2.4. 
+The CGM Feature Characteristic bit for supporting Calibration is set to 1.  
+More than one Calibration Data record is present in the IUT, e.g., by performing 
+CGMS/SEN/CGMCP/BV-08-C [CGM Specific Ops – ‘Set Glucose Calibration value’]. The number of 
+records stored shall be known. 
+Both the IUT and the Lower Tester have the same CGM Feature Bit settings concerning E2E-CRC 
+safety (Bit 12 “E2E-CRC supported” is set to 1 or to 0). 
+
+============================== PAGE 66 ==============================
+Continuous Glucose Monitoring Service (CGMS)  /  Test Suite 
+Bluetooth SIG Proprietary Page 66 of 86 
+3. The IUT sends an indication of the CGM Specific Ops Control Point characteristic with the 
+‘Response Code’ Op Code (0x1C) and an Operand representing the Request Op Code (0x19) 
+followed by the Response Code for ‘Success’ (0x01) 
+4. The Lower Tester receives an ATT_Handle_Value_Indication from the IUT containing the CGM 
+Specific Ops Control Point characteristic handle and value. 
+5. The Lower Tester sends an ATT_Handle_Value_Confirmation to the IUT. 
+6. Perform CGMS/SEN/CR/BV-08-C [Characteristic Read – ‘CGM Status’] to verify that the Device 
+Specific Alert bit is cleared. 
+7. Verify the characteristic value meets the requirements of the service. 
+• Expected Outcome 
+Pass verdict 
+The IUT sends an indication of the CP CGM Specific Ops characteristic with the ‘Response Code’ Op 
+Code (0x1C) and an Operand representing Request Op Code (0x19) followed by the Response Code 
+for ‘Success’ (0x01). 
+The Device Specific Alert Bit in the CGM Status and Status Annunciation Field are reset. 
+CGMS/SEN/CGMCP/BV-22-C [CGM Specific Ops – ‘Start Session’ Type 1]  
+• Test Purpose 
+Verify that the IUT can perform the ‘Start session’ procedure if no Session is currently running. 
+• Reference 
+[2] 3.7.1, 3.7.2.8 
+• Initial Condition 
+Perform the preamble described in in Section 4.2.4. 
+No CGM Session is currently running. 
+Both the IUT and the Lower Tester have the same CGM Feature Bit settings concerning E2E -CRC 
+safety (Bit 12 “E2E-CRC supported” is set to 1 or to 0). 
+• Test Procedure 
+1. The Lower Tester writes ‘Start Session’ Op Code (0x1A) to the CGM Specific Ops Control Point 
+with no Operand. 
+2. The IUT sends an indication of the CGM Specific Ops Control Point characteristic with the 
+‘Response Code’ Op Code (0x1C) and an Operand representing the Request Op Code (0x1A) 
+followed by the Response Code for ‘Success’ (0x01). 
+3. The Lower Tester receives an ATT_Handle_Value_Indication from the IUT containing the CGM 
+Specific Ops Control Point characteristic handle and value. 
+4. The Lower Tester sends an ATT_Handle_Value_Confirmation to the IUT. 
+5. The Lower Tester executes the procedure included in CGMS/SEN/CR/BV-08-C [Characteristic 
+Read – ‘CGM Status’] 
+
+============================== PAGE 67 ==============================
+Continuous Glucose Monitoring Service (CGMS)  /  Test Suite 
+Bluetooth SIG Proprietary Page 67 of 86 
+6. Verify that the CGM Status Bit ‘Session stopped’ bit set to 0. 
+7. Verify the characteristic value meets the requirements of the service. 
+• Expected Outcome 
+Pass verdict 
+The IUT sends an indication of the CP CGM Specific Ops characteristic with the ‘Response Code’ Op 
+Code (0x1C) and an Operand representing Request Op Code (0x1A) followed by the Response Code 
+for ‘Success’ (0x01). 
+The CGM Status Bit ‘Session stopped’ is set to 0. 
+CGMS/SEN/CGMCP/BI-08-C [CGM Specific Ops – ‘Start Session’ Type 2] 
+• Test Purpose 
+Verify that the IUT can‘t perform the ‘Start session’ procedure if a Session is currently running. 
+• Reference 
+[2] 3.7.1, 3.7.2.8 
+• Initial Condition 
+Perform the preamble described in in Section 4.2.4. 
+A CGM Session is currently running. 
+Both the IUT and the Lower Tester have the same CGM Feature Bit settings concerning E2E -CRC 
+safety (Bit 12 “E2E-CRC supported” is set to 1 or to 0). 
+• Test Procedure 
+1. The Lower Tester executes the procedure included in CGMS/SEN/CR/BV-08-C [Characteristic 
+Read – ‘CGM Status’]. 
+2. Verify that the CGM Status Bit ‘Session stopped’ is set to 0. 
+3. The Lower Tester writes ‘Start Session’ Op Code (0x1A) to the CGM Specific Ops Control Point 
+with no Operand. 
+4. The IUT sends an indication of the CGM Specific Ops Control Point characteristic with the 
+‘Response Code’ Op Code (0x1C) and an Operand representing the Request Op Code (0x1A) 
+followed by the Response Code for ‘Procedure not completed’ (0x04).  
+5. The Lower Tester receives an ATT_Handle_Value_Indication from the IUT containing the CGM 
+Specific Ops Control Point characteristic handle and value. 
+6. The Lower Tester sends an ATT_Handle_Value_Confirmation to the IUT. 
+7. The Lower Tester executes the procedure included in CGMS/SEN/CR/BV-08-C [Characteristic 
+Read – ‘CGM Status’]. 
+8. Verify the characteristic value meets the requirements of the service. 
+
+============================== PAGE 68 ==============================
+Continuous Glucose Monitoring Service (CGMS)  /  Test Suite 
+Bluetooth SIG Proprietary Page 68 of 86 
+• Expected Outcome 
+Pass verdict 
+The IUT sends an indication of the CGM Specific Ops Control Point characteristic with the ‘Response 
+Code’ Op Code (0x1C) and an Operand representing the Request Op Code (0x1A) followed by the 
+Response Code for ‘Procedure not completed’ (0x04). 
+The CGM Status Bit ‘Session stopped’ is set to 0. 
+CGMS/SEN/CGMCP/BV-23-C [CGM Specific Ops – ‘Stop session’] 
+• Test Purpose 
+Verify that the IUT can perform the ‘Stop session’ procedure to stop a currently running Session. 
+• Reference 
+[2] 3.7.1, 3.7.2.9 
+• Initial Condition 
+Perform the preamble described in in Section 4.2.4. 
+A CGM Session is currently running. 
+Both the IUT and the Lower Tester have the same CGM Feature Bit settings concerning E2E -CRC 
+safety (Bit 12 “E2E-CRC supported” is set to 1 or to 0). 
+• Test Procedure 
+1. The Lower Tester executes the procedure included in CGMS/SEN/CR/BV-08-C [Characteristic 
+Read – ‘CGM Status’]. 
+2. Verify that the CGM Status Bit ‘Session stopped’ is set to 0. 
+3. The Lower Tester writes ‘Stop Session’ Op Code (0x1B) to the CGM Specific Ops Control Point 
+with no Operand. 
+4. The IUT sends an indication of the CGM Specific Ops Control Point characteristic with the 
+‘Response Code’ Op Code (0x1C) and an Operand representing the Request Op Code (0 x1B) 
+followed by the Response Code for ‘Success’ (0x01). 
+5. The Lower Tester receives an ATT_Handle_Value_Indication from the IUT containing the CGM 
+Specific Ops Control Point characteristic handle and value. 
+6. The Lower Tester sends an ATT_Handle_Value_Confirmation to the IUT. 
+7. The Lower Tester executes the procedure included in CGMS/SEN/CR/BV-08-C [Characteristic 
+Read – ‘CGM Status’]. 
+8. Verify that the CGM Status Bit ‘Session stopped’ bit set to 1. 
+9. Verify the characteristic value meets the requirements of the service. 
+
+============================== PAGE 69 ==============================
+Continuous Glucose Monitoring Service (CGMS)  /  Test Suite 
+Bluetooth SIG Proprietary Page 69 of 86 
+• Expected Outcome 
+Pass verdict 
+The IUT sends an indication of the CGM Specific Ops Control Point characteristic with the ‘Response 
+Code’ Op Code (0x1C) and an Operand representing the Request Op Code (0x1B) followed by the 
+Response Code for ‘Success’ (0x01). 
+The CGM Status Bit ‘Session stopped’ bit set to 1. 
+CGMS/SEN/CGMCP/BV-24-C [CGM Specific Ops – ‘Start Session’ Type 3] 
+• Test Purpose 
+Verify that the IUT can‘t perform the ‘Start session’ procedure if a currently running Session is 
+stopped and the IUT does not support Multiple Sessions. 
+• Reference 
+[2] 3.7.1, 3.7.2.8 
+• Initial Condition 
+Perform the preamble described in in Section 4.2.4. 
+A CGM Session is currently running. 
+Both the IUT and the Lower Tester have the same CGM Feature Bit settings concerning E2E -CRC 
+safety (Bit 12 “E2E-CRC supported” is set to 1 or to 0). 
+• Test Procedure 
+1. The Lower Tester executes the procedure included in CGMS/SEN/CR/BV-08-C [Characteristic 
+Read – ‘CGM Status’]. 
+2. Verify that the CGM Status Bit ‘Session stopped’ is set to 0. 
+3. The Lower Tester executes the procedure included in CGMS/SEN/CGMCP/BV-23-C [CGM 
+Specific Ops – ‘Stop session’] to stop the currently running session. 
+4. The Lower Tester executes the procedure included in CGMS/SEN/CR/BV-08-C [Characteristic 
+Read – ‘CGM Status’]. 
+5. Verify that the CGM Status Bit ‘Session stopped’ is set to 1. 
+6. The Lower Tester writes ‘Start Session’ Op Code (0x1A) to the CGM Specific Ops Control Point 
+with no Operand. 
+7. The IUT sends an indication of the CGM Specific Ops Control Point characteristic with the 
+‘Response Code’ Op Code (0x1C) and an Operand representing the Request Op Code (0x1A) 
+followed by the Response Code for ‘Procedure not completed’ (0x04).  
+8. The Lower Tester receives an ATT_Handle_Value_Indication from the IUT containing the CGM 
+Specific Ops Control Point characteristic handle and value. 
+9. The Lower Tester sends an ATT_Handle_Value_Confirmation to the IUT. 
+
+============================== PAGE 70 ==============================
+Continuous Glucose Monitoring Service (CGMS)  /  Test Suite 
+Bluetooth SIG Proprietary Page 70 of 86 
+• Expected Outcome 
+Pass verdict 
+The IUT sends an indication of the CGM Specific Ops Control Point characteristic with the ‘Response 
+Code’ Op Code (0x1C) and an Operand representing the Request Op Code (0x1A) followed by the 
+Response Code for ‘Procedure not completed’ (0x04). 
+CGMS/SEN/CGMCP/BV-25-C [CGM Specific Ops – ‘Start Session’ Type 4] 
+• Test Purpose 
+Verify that the IUT can perform the ‘Start session’ procedure after a currently running Session is 
+stopped. 
+• Reference 
+[2] 3.7.1, 3.7.2.8 
+• Initial Condition 
+Perform the preamble described in in Section 4.2.4. 
+A CGM Session is currently running. 
+Both the IUT and the Lower Tester have the same CGM Feature Bit settings concerning E2E -CRC 
+safety (Bit 12 “E2E-CRC supported” is set to 1 or to 0). 
+• Test Procedure 
+1. The Lower Tester executes the procedure included in CGMS/SEN/CR/BV-08-C [Characteristic 
+Read – ‘CGM Status’]. 
+2. Verify that the CGM Status Bit ‘Session stopped’ is set to 0. 
+3. The Lower Tester executes the procedure included in CGMS/SEN/CGMCP/BV-23-C [CGM 
+Specific Ops – ‘Stop session’] to stop the currently running session. 
+4. The Lower Tester executes the procedure included in CGMS/SEN/CR/BV-08-C [Characteristic 
+Read – ‘CGM Status’]. 
+5. Verify that the CGM Status Bit ‘Session stopped’ is set to 1. 
+6. The Lower Tester writes ‘Start Session’ Op Code (0x1A) to the CGM Specific Ops Control Point 
+with no Operand. 
+7. The IUT sends an indication of the CGM Specific Ops Control Point characteristic with the 
+‘Response Code’ Op Code (0x1C) and an Operand representing the Request Op Code (0x1A) 
+followed by the Response Code for ‘Success’ (0x01). 
+8. The Lower Tester receives an ATT_Handle_Value_Indication from the IUT containing the CGM 
+Specific Ops Control Point characteristic handle and value. 
+9. The Lower Tester sends an ATT_Handle_Value_Confirmation to the IUT. 
+10. The Lower Tester executes the procedure included in CGMS/SEN/CR/BV-08-C [Characteristic 
+Read – ‘CGM Status’]. 
+
+============================== PAGE 71 ==============================
+Continuous Glucose Monitoring Service (CGMS)  /  Test Suite 
+Bluetooth SIG Proprietary Page 71 of 86 
+11. Verify that the CGM Status Bit ‘Session stopped’ is set to 0. 
+12. Verify the characteristic value meets the requirements of the service. 
+• Expected Outcome 
+Pass verdict 
+The IUT sends an indication of the CGM Specific Ops Control Point characteristic with the ‘Response 
+Code’ Op Code (0x1C) and an Operand representing the Request Op Code (0x1A) followed by the 
+Response Code for ‘Success’ (0x01). 
+Session Stopped bit is set to 0. 
+4.16 Common Behavior of Control Points – General Error Handling 
+This test group contains test cases to verify compliant operation when the Lower Tester uses Control 
+Point (RACP, and CGM specific Ops CP) procedures and an error results. 
+CGMS/SEN/CBE/BI-01-C [General Error Handling –‘Op Code Not Supported’] 
+• Test Purpose 
+Verify that the IUT responds appropriately when a Client writes an unsupported Op Code to the 
+Control Points. 
+• Reference 
+[2] 3.8, 3.8.2 
+• Initial Condition 
+Perform the preamble described in in Section 4.2.3. 
+Perform an action on the IUT that will induce it to generate 3 or more records.  
+• Test Procedure 
+1. The Lower Tester writes an Op Code (0x00) to the Record Access Control Point using an 
+Operator of ‘All Records’ (0x01) and no Operand. 
+2. The Lower Tester writes an Op Code value from the Reserved for Future Use range other than 
+0x00 to the Record Access Control Point using an Operator of ‘All Records’ (0x01) and no 
+Operand. 
+3. Verify the characteristic value meets the requirements of the service. 
+• Expected Outcome 
+Pass verdict 
+For both cases, the IUT sends an indication of the Record Access Control Point characteristic with 
+the ‘Response Code’ Op Code (0x06), an Operator of Null (0x00), and an Operand representing the 
+Request Op Code (i.e., the RFU value written) followed by the Response Code Value for ‘Op Code 
+not supported’ (0x02). 
+
+============================== PAGE 72 ==============================
+Continuous Glucose Monitoring Service (CGMS)  /  Test Suite 
+Bluetooth SIG Proprietary Page 72 of 86 
+CGMS/SEN/CBE/BI-02-C [General Error Handling – ‘Invalid Operator’] 
+• Test Purpose 
+Verify that the IUT responds appropriately when a Client writes a ‘Report Stored Records’ Op Code to 
+the Record Access Control Point with an invalid Operator. 
+• Reference 
+[2] 3.6.3.6, 3.8.2 
+• Initial Condition 
+Perform the preamble described in in Section 4.2.3. 
+Perform an action on the IUT that will induce it to generate 3 or more records. 
+• Test Procedure 
+1. The Lower Tester writes the ‘Report Stored Records’ Op Code (0x01) to the RACP using an 
+Operator of Null (0x00) and no Operand. 
+2. The IUT sends an indication of the Record Access Control Point characteristic with the ‘Response 
+Code’ Op Code (0x06), an Operator of Null (0x00), and an Operand representing Request Op 
+Code (0x01) followed by the Response Code Value for ‘Invalid Operator’ (0x03).  
+3. The Lower Tester receives an ATT_Handle_Value_Indication from the IUT containing the CGM 
+Specific Ops Control Point characteristic handle and value. 
+4. The Lower Tester sends an ATT_Handle_Value_Confirmation to the IUT. 
+5. Verify the characteristic value meets the requirements of the service. 
+• Expected Outcome 
+Pass verdict 
+The IUT sends an indication of the Record Access Control Point characteristic with the ‘Response 
+Code’ Op Code (0x06), an Operator of Null (0x00), and an Operand representing Request Op Code 
+(0x01) followed by the Response Code Value for ‘Invalid Operator’ (0x03). 
+CGMS/SEN/CBE/BI-03-C [General Error Handling – ‘Unsupported Operator’] 
+• Test Purpose 
+Verify that the IUT responds appropriately when a Client writes an Op Code to the RACP with an 
+unsupported Operator. 
+• Reference 
+[2] 3.8, 3.8.2 
+• Initial Condition 
+Perform the preamble described in in Section 4.2.3. 
+Perform an action on the IUT that will induce it to generate 3 or more records.  
+
+============================== PAGE 73 ==============================
+Continuous Glucose Monitoring Service (CGMS)  /  Test Suite 
+Bluetooth SIG Proprietary Page 73 of 86 
+• Test Procedure 
+1. The Lower Tester writes the ‘Report Stored Records’ Op Code (0x01) to the Record Access 
+Control Point using an Operator from the ‘Reserved for Future Use’ range and no Operand.  
+2. The IUT sends an indication of the Record Access Control Point characteristic with the ‘Response 
+Code’ Op Code (0x06), an Operator of Null (0x00), and an Operand representing the Request Op 
+Code (0x01) followed by the Response Code Value for ‘Operator not supported’ (0x04).  
+3. The Lower Tester receives an ATT_Handle_Value_Indication from the IUT containing the Record 
+Access Control Point characteristic handle and value. 
+4. The Lower Tester sends an ATT_Handle_Value_Confirmation to the IUT. 
+5. Verify the characteristic value meets the requirements of the service. 
+• Expected Outcome 
+Pass verdict 
+The IUT sends an indication of the Record Access Control Point characteristic with the ‘Response 
+Code’ Op Code (0x06), an Operator of Null (0x00), and an Operand representing the Request Op 
+Code (0x01) followed by the Response Code Value for ‘Operator not supported’ (0x04). 
+CGMS/SEN/CBE/BI-04-C [General Error Handling – ‘Invalid Operand’ – Type 1] 
+• Test Purpose 
+Verify that the IUT responds appropriately when a Client writes an Op Code to the Record Access 
+Control Point with an Operand where none was expected. 
+• Reference 
+[2] 3.8, 3.8.2 
+• Initial Condition 
+Perform the preamble described in in Section 4.2.3. 
+Perform an action on the IUT that will induce it to generate 3 or more records.  
+• Test Procedure 
+1. The Lower Tester writes the ‘Report stored records’ Op Code (0x01) to the Record Access 
+Control Point using an Operator of ‘all records’ (0x01) and an Operand containing the Time Offset 
+Filter Type and a Time Offset value of 0x0001. 
+2. The IUT sends an indication of the Record Access Control Point characteristic with the ‘Response 
+Code’ Op Code (0x06) and an Operand representing the Request Op Code (0x01) followed by 
+the Response Code Value for ‘Invalid Operand’ (0x05). 
+3. The Lower Tester receives an ATT_Handle_Value_Indication from the IUT containing the Record 
+Access Control Point characteristic handle and value. 
+4. The Lower Tester sends an ATT_Handle_Value_Confirmation to the IUT. 
+5. Verify the characteristic value meets the requirements of the service. 
+
+============================== PAGE 74 ==============================
+Continuous Glucose Monitoring Service (CGMS)  /  Test Suite 
+Bluetooth SIG Proprietary Page 74 of 86 
+• Expected Outcome 
+Pass verdict 
+The IUT sends an indication of the Record Access Control Point characteristic with the ‘Response 
+Code’ Op Code (0x06) and an Operand representing the Request Op Code (0x01) followed by the 
+Response Code Value for ‘Invalid Operand’ (0x05). 
+CGMS/SEN/CBE/BI-05-C [General Error Handling – ‘Invalid Operand’ – Type 2] 
+• Test Purpose 
+Verify that the IUT responds appropriately when a Client writes an Op Code to the R ecord Access 
+Control Point with an Operand that is invalid. 
+• Reference 
+[2] 3.8, 3.8.2 
+• Initial Condition 
+If a connection exists, it shall be disconnected. 
+Perform the preamble described in in Section 4.2.3. 
+Perform an action on the IUT that will induce it to generate 3 or more records.  
+• Test Procedure 
+1. The Lower Tester writes the ‘Report Stored Records’ Op Code (0x01) to the Record Access 
+Control Point using an Operator of ‘Within range of’ (0x04) and a Operand containing the Time 
+Offset Filter Type (0x01) followed by a pair of Time Offset values 0xFFFF representing the 
+‘minimum’ value and 0x0000 representing the ‘maximum’ value. 
+2. The IUT sends an indication of the Record Access Control Point characteristic with the ‘Response 
+Code’ Op Code (0x06), an Operator of Null (0x00), and an Operand representing the Request Op 
+Code (0x01) followed by the Response Code Value for ‘Invalid Operand’ (0x05). 
+3. The Lower Tester receives an ATT_Handle_Value_Indication from the IUT containing the Record 
+Access Control Point characteristic handle and value. 
+4. The Lower Tester sends an ATT_Handle_Value_Confirmation to the IUT. 
+5. Verify the characteristic value meets the requirements of the service. 
+• Expected Outcome 
+Pass verdict 
+The IUT sends an indication of the Record Access Control Point characteristic with the ‘Response 
+Code’ Op Code (0x06), an Operator of Null (0x00), and an Operand representing the Request Op 
+Code (0x01) followed by the Response Code Value for ‘Invalid Operand’ (0x05).  
+
+============================== PAGE 75 ==============================
+Continuous Glucose Monitoring Service (CGMS)  /  Test Suite 
+Bluetooth SIG Proprietary Page 75 of 86 
+CGMS/SEN/CBE/BI-06-C [General Error Handling – ‘Missing CRC’] 
+• Test Purpose 
+Verify that the IUT does not allow a write of the CGM Session Start Time characteristic if a required 
+E2E-CRC is missing. 
+• Reference 
+[2] 1.8, 3.4.4 
+• Initial Condition 
+IUT supports E2E-CRC safety; The Lower Tester does not support E2E-CRC safety. 
+The handle of the characteristic value referenced in the test case below has been p reviously 
+discovered by the Lower Tester during the test procedure in Section 4.4 or is known to the Lower 
+Tester by other means. 
+• Test Procedure 
+1. The Lower Tester writes the ‘Write CGM Session Start Time’ Op Code with an Operand 
+containing a value for a Session Start time as defined in [6] without an E2E-CRC. 
+2. The Lower Tester receives an ATT_Error Response from the IUT. 
+3. Verify the characteristic value meets the requirements of the service. 
+• Expected Outcome 
+Pass Verdict 
+The IUT sends an ATT Error Response with the error code ‘0x80’ set to ‘Missing CRC’ as defined in 
+[2]. 
+CGMS/SEN/CBE/BI-07-C [General Error Handling – ‘Invalid CRC’] 
+• Test Purpose 
+Verify that the IUT does not allow a write of the CGM Specific Ops Control Point characteristic if a 
+required E2E-CRC is invalid. 
+• Reference 
+[2] 1.8, 3.7.2 
+• Initial Condition 
+Both the IUT and the Lower Tester support E2E-CRC safety (Bit 12 ‘E2E-CRC supported’ in CGM 
+Feature flags is set to 0). 
+The handle of each characteristic value referenced in the test cases below has been previously 
+discovered by the Lower Tester during the test procedure in Section 4.4 or is known to the Lower 
+Tester by other means. 
+
+============================== PAGE 76 ==============================
+Continuous Glucose Monitoring Service (CGMS)  /  Test Suite 
+Bluetooth SIG Proprietary Page 76 of 86 
+• Test Procedure 
+1. The Lower Tester writes the ‘Set CGM Communication interval’ Op Code (0x01) to the CGM 
+Specific Ops Control Point with an Operand containing a valid communication interval (e.g., 5 
+min) and an invalid CRC. 
+2. The Lower Tester receives an ATT_Error Response. 
+3. Verify the characteristic value meets the requirements of the service. 
+• Expected Outcome 
+Pass Verdict 
+The IUT sends an ATT Error Response with the error code ‘0x81’ set to ‘Invalid CRC’ as defined in 
+[2]. 
+
+============================== PAGE 16 ==============================
+Continuous Glucose Monitoring Service (CGMS)  /  Test Suite 
+Bluetooth SIG Proprietary Page 16 of 86 
+2. If the UUID in a handle-UUID pair is for a characteristic descriptor referenced in a test case 
+below, read the characteristic descriptor by executing the test procedure of GATT test case 
+GATT/SR/GAR/BV-06-C in [5]. 
+3. Verify the value of the characteristic descriptor meets the requirements of the service.  
+• Expected Outcome 
+The following pass and fail verdicts apply to the test cases listed in Table 4.3: 
+Pass verdict 
+The characteristic descriptor is discovered, the characteristic descriptor is read, and the value of the 
+characteristic descriptor meets the requirements of the service. 
+4.6 Characteristic Read 
+• Test Purpose 
+This test group is for generic use and contains one or more test cases to read and verify that the 
+characteristic values required by the service are compliant. The verification is done one v alue at the 
+time, as enumerated in the test cases in Table 4.4 below, using this generic test procedure. 
+• Reference 
+[2] 3.2.1 
+• Initial Condition 
+The handle of each characteristic value referenced in the test cases below has been previously 
+discovered by the Lower Tester during the test procedure in Section 4.4 or is known to the Lower 
+Tester by other means. 
+Establish an ATT Bearer connection between the Lower Tester and IUT as described in Section 4.2.1 
+if using LE Transport or Section 4.2.2 if using a BR/EDR Transport. 
+• Test Case Configuration 
+Test Case Value (Requirements) 
+CGMS/SEN/CR/BV-01-C [Characteristic Read – ‘CGM Feature’] 3 octets received with RFU bits 
+set to 0. 
+(Section 3.2.1.1 in [2]) 
+
+============================== PAGE 17 ==============================
+Continuous Glucose Monitoring Service (CGMS)  /  Test Suite 
+Bluetooth SIG Proprietary Page 17 of 86 
+Test Case Value (Requirements) 
+CGMS/SEN/CR/BV-02-C [Characteristic Read – ‘CGM Feature 
+Type Sample Location’] 
+Note: Set the bit 0 of the Type Nibble to 1 for a precise distinction 
+between LSN and MSN. 
+2 Nibbles received containing 
+following values: 
+• LSN = Type Nibble 
+• MSN = Sample-
+Location Nibble 
+The RFU bits in both nibble are 
+set to 0 
+(Section 3.2.1.2 in [2]) 
+Table 4.4: Characteristic Read Value Test Cases 
+• Test Procedure 
+The following test procedure applies to the test cases listed in the table below for each characteristic 
+referenced in a test case below: 
+1. Read the characteristic value by executing the test procedure of GATT test case 
+GATT/SR/GAR/BV-01-C in [5]. 
+2. Verify the characteristic value meets the requirements of the service. 
+• Expected Outcome 
+The following pass and fail verdicts apply to the test cases listed in Table 4.4: 
+Pass verdict 
+The characteristic is successfully read and the characteristic value meets the requirements of the 
+service. 
+A 2 octet E2E-CRC-Field is present in the read characteristic value. The field value depends on if the 
+IUT supports E2E-safety or not. If not, the value should be set to 0xFFFF. 
+CGMS/SEN/CR/BV-03-C [Characteristic Read – ‘CGM Feature’ – Multiple Bonds] 
+• Test Purpose 
+Verify that the IUT claims proper support for multiple bonds in the CGM Feature characteristic  (CGM 
+Feature Bit 13 ‘Multiple Bond supported’ is set to 1). 
+• Reference 
+Section 3.2.1.1 in [2] 
+• Initial Condition 
+The handle of the characteristic value the test case below has been previously discovered by the 
+Lower Tester during the test procedure in Section 4.4 or is known to the Lower Tester by other 
+means. 
+Establish an ATT Bearer connection between the Lower Tester and IUT as described in Section 4.2.1 
+if using LE Transport or Section 4.2.2 if using a BR/EDR Transport. 
+
+============================== PAGE 18 ==============================
+Continuous Glucose Monitoring Service (CGMS)  /  Test Suite 
+Bluetooth SIG Proprietary Page 18 of 86 
+• Test Procedure 
+1. Read the value of the CGM Feature characteristic by executing the test procedure of GATT test 
+case GATT/SR/GAR/BV-01-C in [5]. 
+2. Verify the characteristic value meets the requirements of the service. 
+• Expected Outcome 
+Pass verdict 
+The characteristic is successfully read and Bit 13 of the CGM Feature characteristic ‘Multiple Bond 
+supported’ is set to 1. 
+CGMS/SEN/CR/BV-04-C [Characteristic Read – ‘CGM Session Start Time with E2E-CRC’] 
+• Test Purpose 
+Verify that the IUT can read the CGM Session Start Time characteristic. 
+• Reference 
+[2] 3.4 
+• Initial Condition 
+The handle of the characteristic in the test case below has been previously discovered by the Lower 
+Tester during the test procedure in Section 4.4 or is known to the Lower Tester by other means. 
+Establish an ATT Bearer connection between the Lower Tester and IUT as described in Section 4.2.1 
+if using LE Transport or Section 4.2.2 if using a BR/EDR Transport. 
+Both the IUT and the Lower Tester support E2E-CRC safety (Bit 12 ‘E2E-CRC supported’ in CGM 
+Feature flags is set to 1). 
+• Test Procedure 
+1. Read the value of the CGM Session Start Time characteristic by executing the test procedure of 
+GATT test case GATT/SR/GAR/BV-01-C in [5]. 
+2. Verify the characteristic value meets the requirements of the service. 
+• Expected Outcome 
+Pass verdict 
+The CGM Session Start Time characteristic is successfully read and meets the requirements of the 
+service. 
+The E2E-CRC field is present in CGM Session Start Time characteristic value. 
+CGMS/SEN/CR/BV-05-C [Characteristic Read – ‘CGM Session Start Time without E2E-
+CRC’] 
+• Test Purpose 
+Verify that the IUT can read the CGM Session Start Time characteristic. 
+
+============================== PAGE 24 ==============================
+Continuous Glucose Monitoring Service (CGMS)  /  Test Suite 
+Bluetooth SIG Proprietary Page 24 of 86 
+• Test Case Configuration 
+Test Case Value (Requirements) 
+CGMS/SEN/CON/BV-01-C [Configure Notification – ‘CGM 
+Measurement’] 0x0001 (Section 3.1.1 in [2]) 
+CGMS/SEN/CON/BV-02-C [Configure Indication – ‘Record Access 
+Control Point’] 0x0002 (Section 3.5 in [2]) 
+CGMS/SEN/CON/BV-03-C [Configure Indication – ‘CGM Specific 
+Ops Control Point’] 0x0002 (Section 3.7 in [2]) 
+Table 4.5: Configure Indication and Notification Test Cases 
+• Test Procedure 
+The following test procedure applies to the test cases listed in the table below:  
+1. Disable indication or notification by writing value 0x0000 to the client characteristic configuration 
+descriptor of the characteristic using the test procedure of GATT test case GATT/SR/GAW/BV-
+08-C in [5]. 
+2. The Lower Tester reads the value of the client characteristic configuration descriptor.  
+3. If the test case is for notification, enable notification by writing value 0x0001 to the client 
+characteristic configuration descriptor of the characteristic. If the test case is for indication, enable 
+indication by writing value 0x0002 to the client characteristic configuration descriptor of the 
+characteristic. 
+4. The Lower Tester reads the value of the client characteristic configuration descriptor. 
+• Expected Outcome 
+Pass verdict 
+The characteristic descriptor is successfully written and the value returned when read is consistent 
+with the value written. 
+4.9 CGM Measurement Characteristic Notification 
+This test group is for generic use and contains one or more test cases to verify that the value of the CGM 
+Measurement characteristic meets the requirements of the service particular the presence of the optional 
+Sensor Status Annunciation field, CGM Trend Information field, CGM Quality field and E2E-CRC field. 
+CGMS/SEN/CN/BV-01-C [CGM Measurement Notifications - Type 1] 
+• Reference 
+[2] 3.1.1 
+• Initial Condition 
+Perform the preamble described in in Section 4.2.3. 
+
+============================== PAGE 25 ==============================
+Continuous Glucose Monitoring Service (CGMS)  /  Test Suite 
+Bluetooth SIG Proprietary Page 25 of 86 
+• Test Procedure 
+Perform an action on the IUT to create at least one CGM Measurement characteristic with at least the 
+mandatory field values as defined in [3]. 
+1. The Lower Tester uses the RACP (e.g., using the procedure in Section 0) to cause the record to 
+be notified. 
+2. Verify the characteristic value meets the requirements of the service. 
+• Expected Outcome 
+Pass verdict 
+The IUT sends a number of notifications of the CGM Measurement characteristic depending on the 
+used MTU size. 
+At least a Size field, a Flags field, a CGM Glucose Concentration field and a Time Offset field are 
+present in the record. 
+The value of the characteristic meets the requirements of the service as defined in the CGM Feature 
+requirement of the different Test Cases. 
+CGMS/SEN/CN/BV-02-C [CGM Measurement Notifications – Type 2] 
+• Test Purpose 
+Verify that the IUT can send notifications of the CGM Measurement characteristic that include Sensor 
+Status Annunciation values. 
+• Reference 
+[2] 3.1.1 
+• Initial Condition 
+Perform the preamble described in in Section 4.2.3. 
+• Test Procedure 
+1. Perform an action on the IUT to create at least one CGM Measurement characteristic that include 
+Sensor Status Annunciation values. 
+2. The Lower Tester uses the RACP (e.g., using the procedure in Section 0) to cause the record to 
+be notified. 
+3. Verify the characteristic value meets the requirements of the service. 
+• Expected Outcome 
+Pass verdict 
+The IUT sends a number of notifications of the CGM Measurement characteristic depending on the 
+used MTU size. 
+A Size field, a Flags field, a CGM Glucose Concentration field and a Time Offset field are present in 
+the record. 
+
+============================== PAGE 26 ==============================
+Continuous Glucose Monitoring Service (CGMS)  /  Test Suite 
+Bluetooth SIG Proprietary Page 26 of 86 
+At least in one record the Sensor Status Annunciation Field is present. 
+The value of the characteristic meets the requirements of the service as defined in the CGM Feature 
+requirement. 
+CGMS/SEN/CN/BV-03-C [CGM Measurement Notifications – Type 3] 
+• Test Purpose 
+Verify that the IUT can send notifications of the CGM Measurement characteristic that includes CGM 
+Trend Information values. 
+• Reference 
+[2] 3.1.1 
+• Initial Condition 
+Perform the preamble described in in Section 4.2.3. 
+• Test Procedure 
+1. Perform an action on the IUT to create at least one CGM Measurement characteristic that 
+includes CGM Trend Information value. 
+2. The Lower Tester uses the RACP (e.g., using the procedure in Section 0) to cause the record to 
+be notified. 
+3. Verify the characteristic value meets the requirements of the service. 
+• Expected Outcome 
+Pass verdict 
+The IUT sends a number of notifications of the CGM Measurement characteristic depending on the 
+used MTU size. 
+A Size field, a Flags field, a CGM Glucose Concentration field and a Time Offset field are present in 
+the record. 
+At least in one record the CGM Trend Information Field is present. 
+The value of the characteristic meets the requirements of the service as defined in the CGM Feature 
+requirement. 
+CGMS/SEN/CN/BV-04-C [CGM Measurement Notifications – Type 4] 
+• Test Purpose 
+Verify that the IUT can send notifications of the CGM Measurement characteristic that includes CGM 
+Quality values. 
+• Reference 
+[2] 3.1.1 
+
+============================== PAGE 27 ==============================
+Continuous Glucose Monitoring Service (CGMS)  /  Test Suite 
+Bluetooth SIG Proprietary Page 27 of 86 
+• Initial Condition 
+Perform the preamble described in in Section 4.2.3. 
+• Test Procedure 
+1. Perform an action on the IUT to create at least one CGM Measurement characteristic that 
+includes CGM Quality value. 
+2. The Lower Tester uses the RACP (e.g., using the procedure in Section 0) to cause the record to 
+be notified. 
+3. Verify the characteristic value meets the requirements of the service. 
+• Expected Outcome 
+Pass verdict 
+The IUT sends a number of notifications of the CGM Measurement characteristic depending on the 
+used MTU size. 
+A Size field, a Flags field, a CGM Glucose Concentration field and a Time Offset field are present in 
+the record. 
+At least in one record the CGM Quality Field is present. 
+The value of the characteristic meets the requirements of the service as defined in the CGM Feature 
+requirement. 
+CGMS/SEN/CN/BV-05-C [CGM Measurement Notifications - Type 5] 
+• Test Purpose 
+Verify that the IUT can send notifications of the CGM Measurement characteristic that includes E2E-
+CRC values. 
+• Reference 
+[2] 3.1.1 
+• Initial Condition 
+Perform the preamble described in in Section 4.2.3. 
+• Test Procedure 
+1. Perform an action on the IUT to create at least one CGM Measurement characteristic including 
+an E2E-CRC value as defined in [3]. 
+2. The Lower Tester uses the RACP (e.g., using the procedure in Section 0) to cause the record to 
+be notified. 
+3. Verify the characteristic value meets the requirements of the service. 

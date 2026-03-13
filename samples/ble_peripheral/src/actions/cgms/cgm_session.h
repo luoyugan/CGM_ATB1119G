@@ -30,4 +30,7 @@ ssize_t cgm_cgms_session_run_time_read_cb(struct bt_conn *conn,
 					   void *buf, uint16_t len,
 					   uint16_t offset);
 
+/** @brief 清空 Session Start Time（Time 字段置 0，DST/TZ 置 unknown）。 */
+void cgm_session_clear_start_time(void);
+
 #endif /* CGM_SESSION_H */

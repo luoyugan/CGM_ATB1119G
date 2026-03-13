@@ -26,6 +26,8 @@ struct cgm_db_record {
 	uint16_t time_offset;    /**< session 内相对分钟偏移 */
 	uint16_t glucose_sfloat; /**< SFLOAT 编码的葡萄糖浓度 (mg/dL) */
 	uint8_t  status[3];      /**< Sensor Status Annunciation 快照 */
+	uint16_t trend_sfloat;   /**< CGM Trend Information（SFLOAT，mg/dL/min）*/
+	uint16_t quality_sfloat; /**< CGM Quality（SFLOAT，%）*/
 };
 
 /* ---- 数据库状态（供 cgm_racp.c 只读访问） ---- */
@@ -48,13 +50,17 @@ uint16_t cgm_encode_sfloat(int16_t mantissa, int8_t exponent);
  * @param time_offset    session 内分钟偏移。
  * @param glucose_sfloat SFLOAT 编码浓度。
  * @param status         3 字节 Sensor Status Annunciation 快照。
+ * @param trend_sfloat   SFLOAT 编码趋势值（Feature 未声明时可传 0）。
+ * @param quality_sfloat SFLOAT 编码质量值（Feature 未声明时可传 0）。
  */
-void cgm_db_push(uint16_t time_offset, uint16_t glucose_sfloat, const uint8_t status[3]);
+void cgm_db_push(uint16_t time_offset, uint16_t glucose_sfloat,
+		 const uint8_t status[3],
+		 uint16_t trend_sfloat, uint16_t quality_sfloat);
 
 /**
  * @brief 从数据库记录重建 CGM Measurement 报文。
  *
- * @param packet   输出缓冲区（至少 9 字节）。
+ * @param packet   输出缓冲区（至少 15 字节）。
  * @param capacity 缓冲区字节容量。
  * @param rec      数据库记录指针。
  * @return 报文实际字节数；0 表示失败。

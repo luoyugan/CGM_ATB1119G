@@ -25,7 +25,7 @@ extern uint8_t cgm_bas_notify_enabled;
 extern struct bt_conn *cgm_active_conn;
 
 /* ========== CGMS 特征运行数据 ========== */
-extern uint16_t cgm_feature_flags;
+extern uint32_t cgm_feature_flags;        /**< 24-bit CGM Feature（§3.2），用 uint32_t 容纳 bit 16 */
 extern uint8_t  cgm_type_sample_location;
 extern uint8_t  cgm_status_annunciation[3];
 extern uint8_t  cgm_session_start_time[9];
@@ -34,6 +34,8 @@ extern uint16_t cgm_time_offset_min;
 extern uint16_t cgm_glucose_mg_dl;
 extern uint8_t  cgm_comm_interval_min;
 extern bool     cgm_session_running;
+extern uint16_t cgm_trend_sfloat;         /**< CGM Trend Information（SFLOAT，mg/dL/min × 10^-1） */
+extern uint16_t cgm_quality_sfloat;       /**< CGM Quality（SFLOAT，% × 10^-1） */
 
 /* ========== BAS 数据 ========== */
 extern uint8_t cgm_battery_level_percent;
