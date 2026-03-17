@@ -1,0 +1,259 @@
+#! armclang --target=arm-arm-none-eabi -march=armv7-m -E -x c
+
+#include "../src/include/autoconf.h"
+#include "../../../include/generated/offsets.h"
+
+#define ROM_ADDR	(CONFIG_FLASH_BASE_ADDRESS + CONFIG_FLASH_LOAD_OFFSET)
+#define ROM_SIZE	(CONFIG_FLASH_SIZE * 1024)
+#define RAM_ADDR	CONFIG_SRAM_BASE_ADDRESS
+#define RAM_SIZE	((CONFIG_SRAM_SIZE * 1024) + CONFIG_SRAM_EXTRA_SIZE)
+
+#define RET_RAM_1_SIZE (0x3000)
+#define RET_RAM_1_END (RAM_ADDR + RET_RAM_1_SIZE)
+#define RET_RAM_2_START (RAM_ADDR + 0x8000)
+
+#define INIT_STATUS_SIZE	(((((ImageLimit(ER_DEVICE_SMPX) - ImageBase(ER_DEVICE_PRE_KERNEL_1)) / _DEVICE_STRUCT_SIZEOF) + 31) / 32) * 4)
+#define DEVICE_BUSY_SIZE	(((((ImageLimit(ER_DEVICE_SMPX) - ImageBase(ER_DEVICE_PRE_KERNEL_1)) / _DEVICE_STRUCT_SIZEOF) + 31) / 32) * 4)
+
+LR1 ROM_ADDR ROM_SIZE  {    ; load region 1
+
+  ER_VECTOR ROM_ADDR ALIGN 4 {
+    * (.exc_vector_table)
+    * (.exc_vector_table.*)
+    * (.gnu.linkonce.irq_vector_table)
+    * (.vectors)
+  }
+   ER_VENEER +0 { 
+    * (Veneer$$Code)
+   }
+
+  ER_TEXT +0 {
+    * (.text)
+    * (.text.*)
+	* (.gnu.linkonce.t.*)
+	* (.glue_7t)
+	* (.glue_7)
+	* (.vfp11_veneer)
+	* (.v4_bx)
+	.ANY (+RO-CODE)
+  }
+  ER_ARM_EXTAB +0 {
+	*(.ARM.extab*)
+	*(gnu.linkonce.armextab.*)
+  }
+  ER_ARM_EXIDX +0 {
+	*(.ARM.exidx*)
+	*(gnu.linkonce.armexidx.*)
+  }
+  ER_INIT_PRE_KERNEL_1 +0 SORTTYPE Lexical {
+    * (.init_PRE_KERNEL_1? )
+  }
+  ER_INIT_PRE_KERNEL_1X +0 SORTTYPE Lexical {
+    * (.init_PRE_KERNEL_1?? )
+  }
+  ER_INIT_PRE_KERNEL_2 +0 SORTTYPE Lexical {
+    * (.init_PRE_KERNEL_2? )
+  }
+  ER_INIT_PRE_KERNEL_2X +0 SORTTYPE Lexical {
+    * (.init_PRE_KERNEL_2?? )
+  }
+  ER_INIT_POST_KERNEL +0 SORTTYPE Lexical {
+    * (.init_POST_KERNEL? )
+  }
+  ER_INIT_POST_KERNELX +0 SORTTYPE Lexical {
+    * (.init_POST_KERNEL?? )
+  }
+  ER_INIT_APPLICATION +0 SORTTYPE Lexical {
+    * (.init_APPLICATION? )
+  }
+  ER_INIT_APPLICATIONX +0 SORTTYPE Lexical {
+    * (.init_APPLICATION?? )
+  }
+  ER_INIT_SMP +0 SORTTYPE Lexical {
+    * (.init_SMP? )
+  }
+  ER_INIT_SMPX +0 SORTTYPE Lexical {
+    * (.init_SMP?? )
+  }
+  ER_INIT_ERROR +0 SORTTYPE Lexical {
+    * (.init_?*)
+  }
+  ER_APP_SHMEM +0 SORTTYPE Lexical {
+    * (.app_regions.*)
+  }
+  ER_NET_12 +0 SORTTYPE Lexical {
+    * (.net_l2.init)
+    * (.net_l2.init*)
+  }
+  ER_BT_CHANNELS +0 SORTTYPE Lexical ALIGNALL 4 {
+    * (._bt_l2cap_fixed_chan.static.*)
+  }
+  ER_BT_BR_CHANNELS +0 SORTTYPE Lexical ALIGNALL 4 {
+    * (._bt_l2cap_br_fixed_chan.static.*)
+  }
+  ER_BT_SERVICES +0 SORTTYPE Lexical ALIGNALL 4 {
+    * (._bt_gatt_service_static.static.*)
+  }
+  ER_SETTINGS_HANDLERS +0 SORTTYPE Lexical ALIGNALL 4 {
+    * (._settings_handler_static.static.*)
+  }
+  ER_LOG_CONST +0 SORTTYPE Lexical {
+    * (.log_const_*)
+  }
+  ER_LOG_BACKENDS +0 SORTTYPE Lexical {
+    * (._log_backend.*)
+  }
+  ER_SHELL +0 SORTTYPE Lexical {
+    * (._shell.static.*)
+  }
+  ER_SHELL_ROOT_CMDS +0 SORTTYPE Lexical {
+    * (.shell_root_cmd_*)
+  }
+  ER_FONT_ENTRY +0 SORTTYPE Lexical {
+    * (._cfb_font.*)
+  }
+  ER_TRACING_BACKENDS +0 {
+    * (._tracing_backend.*)
+  }
+  ER_RODATA +0 ALIGN 4 {
+	* (.rodata)
+	* (.rodata.*)
+	* (.gnu.linkonce.r.*)
+	.ANY (+RO-DATA)
+  }
+	
+  ER_KSDFS_BIN +0 ALIGN 4 {
+	* (.ksdfs)
+  }
+
+  ER_RAMFUNC RAM_ADDR ALIGN 4 {
+	* (.ramfunc)
+	* (.ramfunc.*)
+  }
+  ER_DATAS +0 {
+	* (.data)
+	* (.data.*)
+	* (.kernel.*)
+  }
+
+  ER_DEVICE_PRE_KERNEL_1 +0 SORTTYPE Lexical {
+	* (.device_PRE_KERNEL_1? )
+  }
+  ER_DEVICE_PRE_KERNEL_1X +0 SORTTYPE Lexical {
+	* (.device_PRE_KERNEL_1?? )
+  }
+  ER_DEVICE_PRE_KERNEL_2 +0 SORTTYPE Lexical {
+	* (.device_PRE_KERNEL_2? )
+  }
+  ER_DEVICE_PRE_KERNEL_2X +0 SORTTYPE Lexical {
+	* (.device_PRE_KERNEL_2?? )
+  }
+  ER_DEVICE_POST_KERNEL +0 SORTTYPE Lexical {
+	* (.device_POST_KERNEL? )
+  }
+  ER_DEVICE_POST_KERNELX +0 SORTTYPE Lexical {
+	* (.device_POST_KERNEL?? )
+  }
+  ER_DEVICE_APPLICATION +0 SORTTYPE Lexical {
+	* (.device_APPLICATION? )
+  }
+  ER_DEVICE_APPLICATIONX +0 SORTTYPE Lexical {
+	* (.device_APPLICATION?? )
+  }
+  ER_DEVICE_SMP +0 SORTTYPE Lexical {
+	* (.device_SMP? )
+  }
+  ER_DEVICE_SMPX +0 SORTTYPE Lexical {
+	* (.device_SMP?? )
+  }
+  ER_DEVICE_INIT_STATUS +0 FILL 0 INIT_STATUS_SIZE {
+  }
+  ER_DEVICE_BUSY +0 FILL 0 DEVICE_BUSY_SIZE {
+  }
+  ER_INITSHELL +0 {
+	* (.shell_module_*)
+	* (.shell_cmd_*)
+  }
+  ER_LOG_DYNAMIC +0 SORTTYPE Lexical {
+	* (.log_dynamic_*)
+  }
+  ER_STATIC_THREAD +0 SORTTYPE Lexical ALIGNALL 4 {
+	* (.__static_thread_data.static.*)
+  }
+  ER_K_TIMER +0 ALIGNALL 4 {
+	* (._k_timer.static.*)
+  }
+  ER_K_MEM_SLAB +0 ALIGNALL 4 {
+	* (._k_mem_slab.static.*)
+  }
+  ER_K_MEM_POOL +0 ALIGNALL 4 {
+	* (._k_mem_pool.static.*)
+  }
+  ER_K_HEAP +0 ALIGNALL 4 {
+	* (._k_heap.static.*)
+  }
+  ER_K_SEM +0 ALIGNALL 4 {
+	* (._k_sem.static.*)
+	* (._sys_sem.static.*)
+  }
+  ER_K_MUTEX +0 ALIGNALL 4 {
+	* (._k_mutex.static.*)
+  }
+  ER_K_QUEUE +0 ALIGNALL 4 {
+	* (._k_queue.static.*)
+	* (._k_fifo.static.*)
+	* (._k_lifo.static.*)
+  }
+  ER_NET_BUF_POOL +0 SORTTYPE Lexical ALIGNALL 4 {
+	* (._net_buf_pool.static.*)
+  }
+  ER_NET_L2_DATA +0 SORTTYPE Lexical ALIGNALL 4 {
+	* (.net_l2.data)
+	* (.net_l2.data*)
+  }
+}
+
+LR2 AlignExpr(ImageLimit(ER_NET_L2_DATA),512) {    ; load region 2
+
+  ER_SW_ISR_TABLE +0 ALIGN 4 FIXED {
+	* (.gnu.linkonce.sw_isr_table)
+  }
+  ER_BSS +0 ALIGN 4 FIXED {
+	* (.act_sleep_bss)
+	* (.bss)
+	* (.bss.*)
+	* (COMMON)
+	.ANY (+ZI)
+  }
+
+  ER_S3_NOT_SAVE +0 ALIGN 4 FIXED  {
+	* (.noinit)
+	* (.noinit.*)
+	* ( .act_netbuf_data)
+  }	
+	
+  ER_AUDIO +0 ALIGN 4 FIXED  {
+	* ( .act_enc_buf)
+	* ( .act_pcm_buf)
+  }	
+  ER_OTA+0 ALIGN 4 FIXED  {
+	* ( .act_ota_buf)
+  }
+
+  ER_STACK (RET_RAM_2_START)  ALIGN 4 FIXED  {
+	* (.act_stack*)
+  }
+
+  ;ER_RAM_USED_END +0 ALIGN 4 FIXED  {
+  #if (DEEPSLEEP_MODE == 2)
+  ER_RAM_USED_END ((ImageLimit(ER_BSS)-RET_RAM_1_END) > (RAM_ADDR+RAM_SIZE-ImageLimit(ER_STACK)) ? RAM_ADDR: +0) ALIGN 4 FIXED  {
+  }
+  #endif
+	
+  ER_INT_STACK (RAM_ADDR+RAM_SIZE-CONFIG_ISR_STACK_SIZE) ALIGN 4 FIXED  {
+	* (*interrupt.noinit.stack*)
+  }
+
+  ER_RAM_END (RAM_ADDR+RAM_SIZE) EMPTY 0 {
+  }
+}
