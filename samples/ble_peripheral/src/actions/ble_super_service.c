@@ -21,12 +21,77 @@
 #include "ble_super_service.h"
 #include "ble_data_test_sample.h"
 
+/*
+ * 修改原因：与 nRF5 SDK 的 cgms_sst.h 结构定义保持一致。
+ * 若工程中未引入 Nordic 的 ble_date_time_t，则提供同布局兼容定义。
+ */
+#ifndef BLE_DATE_TIME_H__
+typedef struct
+{
+	uint16_t year;
+	uint8_t  month;
+	uint8_t  day;
+	uint8_t  hours;
+	uint8_t  minutes;
+	uint8_t  seconds;
+} ble_date_time_t;
+#endif
+
+/*
+ * 修改原因：与 nRF5 SDK 的 ble_racp.h 结构定义保持一致。
+ * 重点是字段名 p_operand，避免与 SDK 命名差异导致移植不一致。
+ */
+#ifndef BLE_RACP_H__
+typedef struct
+{
+	uint8_t   opcode;
+	uint8_t   operator;
+	uint8_t   operand_len;
+	uint8_t * p_operand;
+} ble_racp_value_t;
+#endif
+
+/*
+ * 修改原因：与 nRF5 SDK 的 nrf_ble_cgms_init_t 字段保持一致，补充兼容类型声明。
+ */
+#ifndef BLE_SRV_COMMON_H__
+typedef void (*ble_srv_error_handler_t)(uint32_t nrf_error);
+#endif
+
+#ifndef NRF_BLE_GQ_H__
+typedef struct nrf_ble_gq_s nrf_ble_gq_t;
+#endif
+
+#ifndef ENOTCONN
+#define ENOTCONN 57
+#endif
+
+/*
+ * 修改原因：Nordic SDK 使用 BLE_GATT_ATT_MTU_DEFAULT，Zephyr 环境下可能仅提供 BT_* 命名。
+ * 这里增加兼容映射，避免 NRF_BLE_CGMS_MEAS_LEN_MAX 展开时报未定义。
+ */
+#ifndef BLE_GATT_ATT_MTU_DEFAULT
+#if defined(BT_ATT_DEFAULT_LE_MTU)
+#define BLE_GATT_ATT_MTU_DEFAULT BT_ATT_DEFAULT_LE_MTU
+#elif defined(BT_GATT_ATT_MTU_DEFAULT)
+#define BLE_GATT_ATT_MTU_DEFAULT BT_GATT_ATT_MTU_DEFAULT
+#else
+#define BLE_GATT_ATT_MTU_DEFAULT 23
+#endif
+#endif
+
 #define CGMS_DB_MAX_RECORDS                         32
+#define CGMS_CALIBRATION_VALUE_LEN                  10
 #define GLUCOSE_MEAS_INTERVAL_MINUTES              1
 #define GL_CONCENTRATION_INC                       10
 #define GL_CONCENTRATION_DEC                       5
 #define MAX_GLUCOSE_CONCENTRATION                  800
 #define MIN_GLUCOSE_CONCENTRATION                  5
+#define SOCP_COMM_INTERVAL_USE_DEFAULT             0xFF
+#define OPERAND_LESS_GREATER_FILTER_TYPE_SIZE      1
+#define OPERAND_LESS_GREATER_FILTER_PARAM_SIZE     2
+#define OPERAND_LESS_GREATER_SIZE                  \
+	(OPERAND_LESS_GREATER_FILTER_TYPE_SIZE + OPERAND_LESS_GREATER_FILTER_PARAM_SIZE)
 #define RACP_OPERAND_FILTER_TYPE_TIME_OFFSET       0x01
 #define RACP_OPERAND_FILTER_TYPE_FACING_TIME       0x02
 
@@ -99,21 +164,54 @@
 #define SOCP_RSP_PROCEDURE_NOT_COMPLETED           0x04
 #define SOCP_RSP_OUT_OF_RANGE                      0x05
 
+#define NRF_BLE_CGMS_PLUS_INFINITE                     0x07FE
+#define NRF_BLE_CGMS_MINUS_INFINITE                    0x0802
 #define NRF_BLE_CGMS_FEAT_MULTIPLE_BOND_SUPPORTED      (0x01 << 13)
 #define NRF_BLE_CGMS_FEAT_MULTIPLE_SESSIONS_SUPPORTED  (0x01 << 14)
 #define NRF_BLE_CGMS_STATUS_SESSION_STOPPED            (0x01 << 0)
+#define NRF_BLE_CGMS_STATUS_DEVICE_SPECIFIC_ALERT      (0x01 << 4)
 #define NRF_BLE_CGMS_MEAS_TYPE_VEN_BLOOD               0x03
 #define NRF_BLE_CGMS_MEAS_LOC_AST                      0x02
 #define NRF_BLE_CGMS_STATUS_FLAGS_WARNING_OCT_PRESENT  0x20
 #define NRF_BLE_CGMS_STATUS_FLAGS_CALTEMP_OCT_PRESENT  0x40
 #define NRF_BLE_CGMS_STATUS_FLAGS_STATUS_OCT_PRESENT   0x80
 
+/**@name Byte length of various commands (used for validating, encoding, and decoding data).
+ * @{ */
+#define NRF_BLE_CGMS_MEAS_OP_LEN            1                               //!< Length of the opcode inside the Glucose Measurement packet.
+#define NRF_BLE_CGMS_MEAS_HANDLE_LEN        2                               //!< Length of the handle inside the Glucose Measurement packet.
+#define NRF_BLE_CGMS_MEAS_LEN_MAX           (BLE_GATT_ATT_MTU_DEFAULT - \
+                                             NRF_BLE_CGMS_MEAS_OP_LEN - \
+                                             NRF_BLE_CGMS_MEAS_HANDLE_LEN)  //!< Maximum size of a transmitted Glucose Measurement.
+
+#define NRF_BLE_CGMS_MEAS_REC_LEN_MAX       15                              //!< Maximum length of one measurement record. Size 1 byte, flags 1 byte, glucose concentration 2 bytes, offset 2 bytes, status 3 bytes, trend 2 bytes, quality 2 bytes, CRC 2 bytes.
+#define NRF_BLE_CGMS_MEAS_REC_LEN_MIN       6                               //!< Minimum length of one measurement record. Size 1 byte, flags 1 byte, glucose concentration 2 bytes, offset 2 bytes.
+#define NRF_BLE_CGMS_MEAS_REC_PER_NOTIF_MAX (NRF_BLE_CGMS_MEAS_LEN_MAX / \
+                                             NRF_BLE_CGMS_MEAS_REC_LEN_MIN) //!< Maximum number of records per notification. We can send more than one measurement record per notification, but we do not want a a single record split over two notifications.
+
+#define NRF_BLE_CGMS_SOCP_RESP_CODE_LEN     2                               //!< Length of a response. Response code 1 byte, response value 1 byte.
+#define NRF_BLE_CGMS_FEATURE_LEN            6                               //!< Length of a feature. Feature 3 bytes, type 4 bits, sample location 4 bits, CRC 2 bytes.
+#define NRF_BLE_CGMS_STATUS_LEN             7                               //!< Length of a status. Offset 2 bytes, status 3 bytes, CRC 2 bytes.
+#define NRF_BLE_CGMS_MAX_CALIB_LEN          10                              //!< Length of a calibration record. Concentration 2 bytes, time 2 bytes, calibration 4 bits, calibration sample location 4 bits, next calibration time 2 bytes, record number 2 bytes, calibration status 1 byte.
+#define NRF_BLE_CGMS_CALIBS_NB_MAX          5                               //!< Maximum number of calibration values that can be stored.
+#define NRF_BLE_CGMS_SST_LEN                9                               //!< Length of the start time. Date time 7 bytes, time zone 1 byte, DST 1 byte.
+#define NRF_BLE_CGMS_CRC_LEN                2                               //!< Length of the CRC bytes (if used).
+#define NRF_BLE_CGMS_SRT_LEN                2                               //!< Length of the Session Run Time attribute.
+
+#define NRF_BLE_CGMS_SOCP_RESP_LEN          (NRF_BLE_CGMS_MEAS_LEN_MAX - \
+                                            NRF_BLE_CGMS_SOCP_RESP_CODE_LEN) //!< Max lenth of a SOCP response.
+
+#define NRF_BLE_CGMS_RACP_PENDING_OPERANDS_MAX 2                             // !< Maximum number of pending Record Access Control Point operations.
+/** @} */
+
+/**@brief CGM Measurement Sensor Status Annunciation. */
 struct cgms_sensor_annunciation {
 	uint8_t warning;
 	uint8_t calib_temp;
 	uint8_t status;
 };
 
+/**@brief CGM measurement. */
 struct cgms_measurement {
 	uint8_t flags;
 	uint16_t glucose_concentration;
@@ -123,39 +221,77 @@ struct cgms_measurement {
 	uint16_t quality;
 };
 
+/**@brief CGM Measurement record. */
 struct cgms_record {
 	struct cgms_measurement meas;
 };
 
+/**@brief Status of the CGM measurement. */
 struct cgms_status {
 	uint16_t time_offset;
 	struct cgms_sensor_annunciation annunciation;
 };
 
+/**@brief Features supported by the CGM Service. */
 struct cgms_feature_value {
 	uint32_t feature;
 	uint8_t type;
 	uint8_t sample_location;
 };
 
-struct cgms_sst_value {
-	uint16_t year;
-	uint8_t month;
-	uint8_t day;
-	uint8_t hours;
-	uint8_t minutes;
-	uint8_t seconds;
-	uint8_t time_zone;
-	uint8_t dst;
-};
+/**@brief CGM Service initialization structure that contains all options and data needed for
+ *        initializing the service. */
+struct cgms_ble_cgms_init {
+    ble_cgms_evt_handler_t    evt_handler;           /**< Event handler to be called for handling events in the CGM Service. */
+	/* 修改原因：按 nRF5 SDK 的 nrf_ble_cgms_init_t 对齐字段。 */
+	ble_srv_error_handler_t   error_handler;         /**< Function to be called when an error occurs. */
+	nrf_ble_gq_t            * p_gatt_queue;          /**< Pointer to BLE GATT Queue instance. */
+    struct cgms_feature_value feature;               /**< Features supported by the service. */
+    struct cgms_status        initial_sensor_status; /**< Sensor status. */
+    uint16_t                  initial_run_time;      /**< Run time. */
+} nrf_ble_cgms_init_t;
 
-struct racp_request {
-	uint8_t opcode;
-	uint8_t operator;
-	uint8_t operand_len;
-	const uint8_t *operand;
-};
+/**@brief Specific Operation Control Point response structure. */
+typedef struct
+{
+    uint8_t opcode;                               /**< Opcode describing the response. */
+    uint8_t req_opcode;                           /**< The original opcode for the request to which this response belongs. */
+    uint8_t rsp_code;                             /**< Response code. */
+    uint8_t resp_val[NRF_BLE_CGMS_SOCP_RESP_LEN]; /**< Array containing the response value. */
+    uint8_t size_val;                             /**< Length of the response value. */
+} ble_socp_rsp_t;
 
+/**@brief Calibration value. */
+typedef struct
+{
+    uint8_t value[NRF_BLE_CGMS_MAX_CALIB_LEN]; /**< Array containing the calibration value. */
+} nrf_ble_cgms_calib_t;
+
+/**@brief Record Access Control Point transaction data. */
+typedef struct
+{
+    uint8_t          racp_proc_operator;                                                    /**< Operator of the current request. */
+    uint16_t         racp_proc_record_ndx;                                                  /**< Current record index. */
+    uint16_t         racp_proc_records_ndx_last_to_send;                                    /**< The last record to send, can be used together with racp_proc_record_ndx to determine a range of records to send. (used by greater/less filters). */
+    uint16_t         racp_proc_records_reported;                                            /**< Number of reported records. */
+    ble_racp_value_t racp_request;                                                          /**< RACP procedure that has been requested from the peer. */
+    ble_racp_value_t pending_racp_response;                                                 /**< RACP response to be sent. */
+    bool             racp_procesing_active;                                                 /**< RACP processing active. */
+    uint8_t          pending_racp_response_operand[NRF_BLE_CGMS_RACP_PENDING_OPERANDS_MAX]; /**< Operand of the RACP response to be sent. */
+} nrf_ble_cgms_racp_t;
+
+/*
+ * 修改原因：与 nRF5 SDK 的 ble_cgms_sst_t 保持一致，使用 date_time 子结构。
+ */
+typedef struct
+{
+	ble_date_time_t date_time;
+	uint8_t         time_zone;
+	uint8_t         dst;
+} ble_cgms_sst_t;
+
+
+// 注销，用nrf_ble_cgms_racp_t替换
 struct racp_response {
 	uint8_t opcode;
 	uint8_t operator;
@@ -163,11 +299,33 @@ struct racp_response {
 	uint8_t operand_len;
 };
 
-struct socp_request {
-	uint8_t opcode;
-	uint8_t operand_len;
-	const uint8_t *operand;
+/*
+ * 修改原因：与 nRF5 SDK 的 ble_cgms_socp_value_t 保持一致，字段名改为 p_operand。
+ */
+typedef struct
+{
+	uint8_t   opcode;
+	uint8_t   operand_len;
+	uint8_t * p_operand;
+} ble_cgms_socp_value_t;
+
+struct cgms_racp_state {
+	bool processing_active;
+	uint8_t proc_operator;
+	uint16_t proc_record_ndx;
+	uint16_t proc_records_ndx_last_to_send;
+	uint16_t proc_records_reported;
 };
+
+struct cgms_alert_levels {
+	uint16_t patient_high;
+	uint16_t patient_low;
+	uint16_t hypo;
+	uint16_t hyper;
+	uint16_t rate_decrease;
+	uint16_t rate_increase;
+};
+extern const struct bt_gatt_attr attr_cgms_svc[];
 
 static struct bt_conn *m_conn;
 static ble_cgms_evt_handler_t m_evt_handler;
@@ -188,7 +346,7 @@ static struct cgms_status m_status = {
 		.status = NRF_BLE_CGMS_STATUS_SESSION_STOPPED,
 	},
 };
-static struct cgms_sst_value m_sst;
+static ble_cgms_sst_t m_sst;
 static uint16_t m_session_run_time = 20;
 static uint8_t m_comm_interval = GLUCOSE_MEAS_INTERVAL_MINUTES;
 static bool m_session_started;
@@ -202,6 +360,12 @@ static struct bt_gatt_indicate_params m_racp_ind_params;
 static struct bt_gatt_indicate_params m_socp_ind_params;
 static uint8_t m_racp_ind_buf[8];
 static uint8_t m_socp_ind_buf[20];
+static struct cgms_racp_state m_racp;
+static struct cgms_alert_levels m_alert_levels;
+static uint8_t m_calibration_value[CGMS_CALIBRATION_VALUE_LEN] = {
+	0x3E, 0x00, 0x07, 0x00, 0x06,
+	0x07, 0x00, 0x00, 0x00, 0x00,
+};
 
 enum {
 	CGMS_ATTR_SVC = 0,
@@ -223,8 +387,6 @@ enum {
 	CGMS_ATTR_SOCP_VAL,
 	CGMS_ATTR_SOCP_CCC,
 };
-
-extern const struct bt_gatt_attr attr_cgms_svc[];
 
 static void cgms_emit_event(ble_cgms_evt_type_t evt_type)
 {
@@ -255,6 +417,93 @@ static void put_le24(uint8_t *dst, uint32_t value)
 static uint16_t get_le16(const uint8_t *src)
 {
 	return (uint16_t)src[0] | ((uint16_t)src[1] << 8);
+}
+
+static bool cgms_feature_present(uint32_t feature)
+{
+	return ((m_feature.feature & feature) != 0U);
+}
+
+static void cgms_racp_reset_state(void)
+{
+	memset(&m_racp, 0, sizeof(m_racp));
+}
+
+static uint8_t cgms_normalize_comm_interval(uint8_t interval)
+{
+	if (interval == SOCP_COMM_INTERVAL_USE_DEFAULT) {
+		return GLUCOSE_MEAS_INTERVAL_MINUTES;
+	}
+
+	return interval;
+}
+
+static int cgms_record_index_offset_less_or_equal_get(uint16_t offset, uint16_t *record_num)
+{
+	uint16_t i;
+
+	if ((record_num == NULL) || (m_record_count == 0U)) {
+		return -ENOENT;
+	}
+
+	for (i = m_record_count; i > 0U; i--) {
+		if (m_records[i - 1U].meas.time_offset <= offset) {
+			*record_num = (uint16_t)(i - 1U);
+			return 0;
+		}
+	}
+
+	return -ENOENT;
+}
+
+static int cgms_record_index_offset_greater_or_equal_get(uint16_t offset, uint16_t *record_num)
+{
+	uint16_t i;
+
+	if ((record_num == NULL) || (m_record_count == 0U)) {
+		return -ENOENT;
+	}
+
+	for (i = 0U; i < m_record_count; i++) {
+		if (m_records[i].meas.time_offset >= offset) {
+			*record_num = i;
+			return 0;
+		}
+	}
+
+	return -ENOENT;
+}
+
+static bool cgms_socp_response_has_result_code(uint8_t opcode)
+{
+	switch (opcode) {
+	case SOCP_READ_CGM_COMM_INTERVAL_RSP:
+	case SOCP_READ_GLUCOSE_CALIBRATION_VALUE_RESPONSE:
+	case SOCP_READ_PATIENT_HIGH_ALERT_LEVEL_RESPONSE:
+	case SOCP_READ_PATIENT_LOW_ALERT_LEVEL_RESPONSE:
+	case SOCP_HYPO_ALERT_LEVEL_RESPONSE:
+	case SOCP_HYPER_ALERT_LEVEL_RESPONSE:
+	case SOCP_RATE_OF_DECREASE_ALERT_LEVEL_RESPONSE:
+	case SOCP_RATE_OF_INCREASE_ALERT_LEVEL_RESPONSE:
+		return false;
+	default:
+		return true;
+	}
+}
+
+static uint8_t cgms_socp_decode_u16(const ble_cgms_socp_value_t *req, uint16_t *value)
+{
+	if ((req == NULL) || (value == NULL) || (req->operand_len != sizeof(uint16_t)) ||
+	    (req->p_operand == NULL)) {
+		return SOCP_RSP_INVALID_OPERAND;
+	}
+
+	*value = get_le16(req->p_operand);
+	if ((*value == NRF_BLE_CGMS_PLUS_INFINITE) || (*value == NRF_BLE_CGMS_MINUS_INFINITE)) {
+		return SOCP_RSP_OUT_OF_RANGE;
+	}
+
+	return SOCP_RSP_SUCCESS;
 }
 
 static void cgms_schedule_glucose_work(void)
@@ -299,14 +548,15 @@ static uint8_t cgms_encode_status(uint8_t *buf)
 	return 5;
 }
 
+/* 修改原因：SST 字段访问改为 date_time.*，与 nRF5 SDK 的 ble_cgms_sst_t 对齐。 */
 static uint8_t cgms_encode_sst(uint8_t *buf)
 {
-	put_le16(&buf[0], m_sst.year);
-	buf[2] = m_sst.month;
-	buf[3] = m_sst.day;
-	buf[4] = m_sst.hours;
-	buf[5] = m_sst.minutes;
-	buf[6] = m_sst.seconds;
+	put_le16(&buf[0], m_sst.date_time.year);
+	buf[2] = m_sst.date_time.month;
+	buf[3] = m_sst.date_time.day;
+	buf[4] = m_sst.date_time.hours;
+	buf[5] = m_sst.date_time.minutes;
+	buf[6] = m_sst.date_time.seconds;
 	buf[7] = m_sst.time_zone;
 	buf[8] = m_sst.dst;
 	return 9;
@@ -396,14 +646,15 @@ static ssize_t cgms_read_srt(struct bt_conn *conn, const struct bt_gatt_attr *at
 	return bt_gatt_attr_read(conn, attr, buf, len, offset, value, sizeof(value));
 }
 
+/* 修改原因：SST 写入解析保持与 ble_cgms_sst_t 的布局一致。 */
 static void cgms_sst_store_from_raw(const uint8_t *buf)
 {
-	m_sst.year = get_le16(&buf[0]);
-	m_sst.month = buf[2];
-	m_sst.day = buf[3];
-	m_sst.hours = buf[4];
-	m_sst.minutes = buf[5];
-	m_sst.seconds = buf[6];
+	m_sst.date_time.year = get_le16(&buf[0]);
+	m_sst.date_time.month = buf[2];
+	m_sst.date_time.day = buf[3];
+	m_sst.date_time.hours = buf[4];
+	m_sst.date_time.minutes = buf[5];
+	m_sst.date_time.seconds = buf[6];
 	m_sst.time_zone = buf[7];
 	m_sst.dst = buf[8];
 }
@@ -443,7 +694,7 @@ static void cgms_socp_ind_cb(struct bt_conn *conn, struct bt_gatt_indicate_param
 static int cgms_racp_indicate(const uint8_t *data, uint16_t len)
 {
 	if ((m_conn == NULL) || !m_racp_ind_enabled) {
-		return -1;
+		return -ENOTCONN;
 	}
 
 	memcpy(m_racp_ind_buf, data, len);
@@ -458,7 +709,7 @@ static int cgms_racp_indicate(const uint8_t *data, uint16_t len)
 static int cgms_socp_indicate(const uint8_t *data, uint16_t len)
 {
 	if ((m_conn == NULL) || !m_socp_ind_enabled) {
-		return -1;
+		return -ENOTCONN;
 	}
 
 	memcpy(m_socp_ind_buf, data, len);
@@ -476,7 +727,7 @@ static int cgms_measurement_notify(const struct cgms_record *rec)
 	uint8_t len;
 
 	if ((m_conn == NULL) || !m_meas_notify_enabled) {
-		return -1;
+		return -ENOTCONN;
 	}
 
 	len = cgms_encode_measurement(rec, encoded);
@@ -504,12 +755,13 @@ static void cgms_send_racp_num_records(uint16_t count)
 	(void)cgms_racp_indicate(buf, sizeof(buf));
 }
 
-static void cgms_racp_decode(const uint8_t *buf, uint16_t len, struct racp_request *req)
+/* 修改原因：RACP 请求结构改为 ble_racp_value_t，并使用 SDK 同名字段 p_operand。 */
+static void cgms_racp_decode(const uint8_t *buf, uint16_t len, ble_racp_value_t *req)
 {
 	req->opcode = 0xFFU;
 	req->operator = 0xFFU;
 	req->operand_len = 0U;
-	req->operand = NULL;
+	req->p_operand = NULL;
 
 	if (len > 0U) {
 		req->opcode = buf[0];
@@ -519,31 +771,44 @@ static void cgms_racp_decode(const uint8_t *buf, uint16_t len, struct racp_reque
 	}
 	if (len > 2U) {
 		req->operand_len = len - 2U;
-		req->operand = &buf[2];
+		req->p_operand = (uint8_t *)&buf[2];
 	}
 }
 
-static void cgms_socp_decode(const uint8_t *buf, uint16_t len, struct socp_request *req)
+/* 修改原因：SOCP 请求结构改为 ble_cgms_socp_value_t，并使用 SDK 同名字段 p_operand。 */
+static void cgms_socp_decode(const uint8_t *buf, uint16_t len, ble_cgms_socp_value_t *req)
 {
 	req->opcode = 0xFFU;
 	req->operand_len = 0U;
-	req->operand = NULL;
+	req->p_operand = NULL;
 
 	if (len > 0U) {
 		req->opcode = buf[0];
 	}
 	if (len > 1U) {
 		req->operand_len = len - 1U;
-		req->operand = &buf[1];
+		req->p_operand = (uint8_t *)&buf[1];
 	}
 }
 
-static bool cgms_racp_request_valid(const struct racp_request *req, uint8_t *rsp_code)
+static bool cgms_racp_request_valid(const ble_racp_value_t *req, uint8_t *rsp_code)
 {
-	*rsp_code = 0U;
+	*rsp_code = RACP_RESPONSE_RESERVED;
 
 	if (req->opcode == RACP_OPCODE_ABORT_OPERATION) {
-		*rsp_code = RACP_RESPONSE_ABORT_FAILED;
+		if (!m_racp.processing_active) {
+			*rsp_code = RACP_RESPONSE_ABORT_FAILED;
+		} else if (req->operator != RACP_OPERATOR_NULL) {
+			*rsp_code = RACP_RESPONSE_INVALID_OPERATOR;
+		} else if (req->operand_len != 0U) {
+			*rsp_code = RACP_RESPONSE_INVALID_OPERAND;
+		} else {
+			*rsp_code = RACP_RESPONSE_SUCCESS;
+		}
+		return false;
+	}
+
+	if (m_racp.processing_active) {
 		return false;
 	}
 
@@ -564,15 +829,15 @@ static bool cgms_racp_request_valid(const struct racp_request *req, uint8_t *rsp
 		return true;
 	case RACP_OPERATOR_LESS_OR_EQUAL:
 	case RACP_OPERATOR_GREATER_OR_EQUAL:
-		if (req->operand_len != 3U) {
+		if (req->operand_len != OPERAND_LESS_GREATER_SIZE) {
 			*rsp_code = RACP_RESPONSE_INVALID_OPERAND;
 			return false;
 		}
-		if (req->operand[0] == RACP_OPERAND_FILTER_TYPE_FACING_TIME) {
+		if (req->p_operand[0] == RACP_OPERAND_FILTER_TYPE_FACING_TIME) {
 			*rsp_code = RACP_RESPONSE_PROCEDURE_NOT_DONE;
 			return false;
 		}
-		if (req->operand[0] != RACP_OPERAND_FILTER_TYPE_TIME_OFFSET) {
+		if (req->p_operand[0] != RACP_OPERAND_FILTER_TYPE_TIME_OFFSET) {
 			*rsp_code = RACP_RESPONSE_INVALID_OPERAND;
 			return false;
 		}
@@ -586,81 +851,109 @@ static bool cgms_racp_request_valid(const struct racp_request *req, uint8_t *rsp
 	}
 }
 
-static bool cgms_record_matches(const struct cgms_record *rec, const struct racp_request *req)
+static uint16_t cgms_count_matching_records(const ble_racp_value_t *req)
 {
-	uint16_t offset;
+	uint16_t total_records = m_record_count;
+	uint16_t record_index;
 
 	switch (req->operator) {
 	case RACP_OPERATOR_ALL:
-		return true;
+		return total_records;
 	case RACP_OPERATOR_FIRST:
 	case RACP_OPERATOR_LAST:
-		return true;
+		return (total_records > 0U) ? 1U : 0U;
 	case RACP_OPERATOR_LESS_OR_EQUAL:
-		offset = get_le16(&req->operand[1]);
-		return rec->meas.time_offset <= offset;
+		if (cgms_record_index_offset_less_or_equal_get(get_le16(&req->p_operand[1]),
+						      &record_index) == 0) {
+			return (uint16_t)(record_index + 1U);
+		}
+		return 0U;
 	case RACP_OPERATOR_GREATER_OR_EQUAL:
-		offset = get_le16(&req->operand[1]);
-		return rec->meas.time_offset >= offset;
+		if (cgms_record_index_offset_greater_or_equal_get(get_le16(&req->p_operand[1]),
+							 &record_index) == 0) {
+			return (uint16_t)(total_records - record_index);
+		}
+		return 0U;
 	default:
-		return false;
+		return 0U;
 	}
 }
 
-static uint16_t cgms_count_matching_records(const struct racp_request *req)
+static int cgms_report_records(const ble_racp_value_t *req, uint16_t *sent)
 {
 	uint16_t i;
-	uint16_t count = 0U;
+	uint16_t start = 0U;
+	uint16_t end = 0U;
+	int err;
 
-	if (req->operator == RACP_OPERATOR_FIRST || req->operator == RACP_OPERATOR_LAST) {
-		return (m_record_count > 0U) ? 1U : 0U;
+	*sent = 0U;
+	m_racp.proc_operator = req->operator;
+	m_racp.proc_record_ndx = 0U;
+	m_racp.proc_records_ndx_last_to_send = 0U;
+	m_racp.proc_records_reported = 0U;
+	m_racp.processing_active = true;
+
+	if (m_record_count == 0U) {
+		m_racp.processing_active = false;
+		return 0;
 	}
 
-	for (i = 0U; i < m_record_count; i++) {
-		if (cgms_record_matches(&m_records[i], req)) {
-			count++;
+	switch (req->operator) {
+	case RACP_OPERATOR_ALL:
+		start = 0U;
+		end = (uint16_t)(m_record_count - 1U);
+		break;
+	case RACP_OPERATOR_FIRST:
+		start = 0U;
+		end = 0U;
+		break;
+	case RACP_OPERATOR_LAST:
+		start = (uint16_t)(m_record_count - 1U);
+		end = start;
+		break;
+	case RACP_OPERATOR_LESS_OR_EQUAL:
+		if (cgms_record_index_offset_less_or_equal_get(get_le16(&req->p_operand[1]), &end) != 0) {
+			m_racp.processing_active = false;
+			return 0;
 		}
+		start = 0U;
+		break;
+	case RACP_OPERATOR_GREATER_OR_EQUAL:
+		if (cgms_record_index_offset_greater_or_equal_get(get_le16(&req->p_operand[1]), &start) != 0) {
+			m_racp.processing_active = false;
+			return 0;
+		}
+		end = (uint16_t)(m_record_count - 1U);
+		break;
+	default:
+		m_racp.processing_active = false;
+		return -EINVAL;
 	}
 
-	return count;
-}
-
-static uint16_t cgms_report_records(const struct racp_request *req)
-{
-	uint16_t sent = 0U;
-	uint16_t i;
-
-	if (req->operator == RACP_OPERATOR_FIRST) {
-		if (m_record_count > 0U && cgms_measurement_notify(&m_records[0]) == 0) {
-			return 1U;
+	m_racp.proc_record_ndx = start;
+	m_racp.proc_records_ndx_last_to_send = end;
+	for (i = start; i <= end; i++) {
+		err = cgms_measurement_notify(&m_records[i]);
+		if (err != 0) {
+			m_racp.processing_active = false;
+			return err;
 		}
-		return 0U;
-	}
-
-	if (req->operator == RACP_OPERATOR_LAST) {
-		if (m_record_count > 0U && cgms_measurement_notify(&m_records[m_record_count - 1U]) == 0) {
-			return 1U;
-		}
-		return 0U;
-	}
-
-	for (i = 0U; i < m_record_count; i++) {
-		if (!cgms_record_matches(&m_records[i], req)) {
-			continue;
-		}
-		if (cgms_measurement_notify(&m_records[i]) != 0) {
+		(*sent)++;
+		m_racp.proc_records_reported = *sent;
+		m_racp.proc_record_ndx = (uint16_t)(i + 1U);
+		if (i == UINT16_MAX) {
 			break;
 		}
-		sent++;
 	}
 
-	return sent;
+	m_racp.processing_active = false;
+	return 0;
 }
 
 static ssize_t cgms_write_racp(struct bt_conn *conn, const struct bt_gatt_attr *attr,
 	const void *buf, uint16_t len, uint16_t offset, uint8_t flags)
 {
-	struct racp_request req;
+	ble_racp_value_t req;
 	uint8_t rsp_code;
 	uint16_t count;
 
@@ -677,7 +970,13 @@ static ssize_t cgms_write_racp(struct bt_conn *conn, const struct bt_gatt_attr *
 
 	cgms_racp_decode((const uint8_t *)buf, len, &req);
 	if (!cgms_racp_request_valid(&req, &rsp_code)) {
-		cgms_send_racp_response_code(req.opcode, rsp_code);
+		if (rsp_code == RACP_RESPONSE_SUCCESS) {
+			cgms_racp_reset_state();
+		}
+		if (rsp_code != RACP_RESPONSE_RESERVED) {
+			m_racp.processing_active = false;
+			cgms_send_racp_response_code(req.opcode, rsp_code);
+		}
 		return len;
 	}
 
@@ -685,25 +984,43 @@ static ssize_t cgms_write_racp(struct bt_conn *conn, const struct bt_gatt_attr *
 		cgms_send_racp_num_records(cgms_count_matching_records(&req));
 		return len;
 	}
-	
-	count = cgms_report_records(&req);
-	if (count > 0U) {
-		cgms_send_racp_response_code(RACP_OPCODE_REPORT_RECS, RACP_RESPONSE_SUCCESS);
-	} else {
-		cgms_send_racp_response_code(RACP_OPCODE_REPORT_RECS, RACP_RESPONSE_NO_RECORDS_FOUND);
+	if (req.opcode == RACP_OPCODE_REPORT_RECS) {
+		if (cgms_report_records(&req, &count) != 0) {
+			cgms_send_racp_response_code(RACP_OPCODE_REPORT_RECS,
+							RACP_RESPONSE_PROCEDURE_NOT_DONE);
+			return len;
+		}
+
+		if (count > 0U) {
+			cgms_send_racp_response_code(RACP_OPCODE_REPORT_RECS, RACP_RESPONSE_SUCCESS);
+		} else {
+			cgms_send_racp_response_code(RACP_OPCODE_REPORT_RECS, RACP_RESPONSE_NO_RECORDS_FOUND);
+		}
 	}
+
+	// if (cgms_report_records(&req, &count) != 0) {
+	// 	cgms_send_racp_response_code(RACP_OPCODE_REPORT_RECS,
+	// 				    RACP_RESPONSE_PROCEDURE_NOT_DONE);
+	// 	return len;
+	// }
+
+	// if (count > 0U) {
+	// 	cgms_send_racp_response_code(RACP_OPCODE_REPORT_RECS, RACP_RESPONSE_SUCCESS);
+	// } else {
+	// 	cgms_send_racp_response_code(RACP_OPCODE_REPORT_RECS, RACP_RESPONSE_NO_RECORDS_FOUND);
+	// }
 
 	return len;
 }
 
-static void cgms_socp_send_response(uint8_t opcode, uint8_t req_opcode, uint8_t rsp_code,
+static int cgms_socp_send_response(uint8_t opcode, uint8_t req_opcode, uint8_t rsp_code,
 	const uint8_t *value, uint8_t value_len)
 {
 	uint8_t buf[20];
 	uint8_t len = 0U;
 
 	buf[len++] = opcode;
-	if ((opcode != SOCP_READ_CGM_COMM_INTERVAL_RSP)) {
+	if (cgms_socp_response_has_result_code(opcode)) {
 		buf[len++] = req_opcode;
 		buf[len++] = rsp_code;
 	}
@@ -712,7 +1029,15 @@ static void cgms_socp_send_response(uint8_t opcode, uint8_t req_opcode, uint8_t 
 		len += value_len;
 	}
 
-	(void)cgms_socp_indicate(buf, len);
+	return cgms_socp_indicate(buf, len);
+}
+
+static int cgms_socp_send_u16_response(uint8_t opcode, uint16_t value)
+{
+	uint8_t resp[2];
+
+	put_le16(resp, value);
+	return cgms_socp_send_response(opcode, 0U, SOCP_RSP_SUCCESS, resp, sizeof(resp));
 }
 
 static void cgms_start_session(void)
@@ -739,7 +1064,7 @@ static void cgms_stop_session(void)
 static ssize_t cgms_write_socp(struct bt_conn *conn, const struct bt_gatt_attr *attr,
 	const void *buf, uint16_t len, uint16_t offset, uint8_t flags)
 {
-	struct socp_request req;
+	ble_cgms_socp_value_t req;
 	uint8_t value[2];
 
 	ARG_UNUSED(conn);
@@ -761,32 +1086,154 @@ static ssize_t cgms_write_socp(struct bt_conn *conn, const struct bt_gatt_attr *
 			cgms_socp_send_response(SOCP_RESPONSE_CODE, req.opcode, SOCP_RSP_INVALID_OPERAND, NULL, 0U);
 			break;
 		}
-		m_comm_interval = req.operand[0];
+		m_comm_interval = cgms_normalize_comm_interval(req.p_operand[0]);
 		cgms_emit_event(BLE_CGMS_EVT_WRITE_COMM_INTERVAL);
 		cgms_cancel_glucose_work();
 		if (m_session_started && (m_comm_interval != 0U)) {
 			cgms_schedule_glucose_work();
 		}
-		cgms_socp_send_response(SOCP_RESPONSE_CODE, req.opcode, SOCP_RSP_SUCCESS, NULL, 0U);
+		(void)cgms_socp_send_response(SOCP_RESPONSE_CODE, req.opcode, SOCP_RSP_SUCCESS,
+						 NULL, 0U);
 		break;
 	case SOCP_READ_CGM_COMMUNICATION_INTERVAL:
 		value[0] = m_comm_interval;
-		cgms_socp_send_response(SOCP_READ_CGM_COMM_INTERVAL_RSP, req.opcode, SOCP_RSP_SUCCESS, value, 1U);
+		(void)cgms_socp_send_response(SOCP_READ_CGM_COMM_INTERVAL_RSP, req.opcode,
+						 SOCP_RSP_SUCCESS, value, 1U);
+		break;
+	case SOCP_WRITE_GLUCOSE_CALIBRATION_VALUE:
+		if (req.operand_len != CGMS_CALIBRATION_VALUE_LEN) {
+			(void)cgms_socp_send_response(SOCP_RESPONSE_CODE, req.opcode,
+						 SOCP_RSP_INVALID_OPERAND, NULL, 0U);
+			break;
+		}
+		memcpy(m_calibration_value, req.p_operand, CGMS_CALIBRATION_VALUE_LEN);
+		(void)cgms_socp_send_response(SOCP_RESPONSE_CODE, req.opcode, SOCP_RSP_SUCCESS,
+						 NULL, 0U);
+		break;
+	case SOCP_READ_GLUCOSE_CALIBRATION_VALUE:
+		(void)cgms_socp_send_response(SOCP_READ_GLUCOSE_CALIBRATION_VALUE_RESPONSE,
+					 req.opcode, SOCP_RSP_SUCCESS,
+					 m_calibration_value, CGMS_CALIBRATION_VALUE_LEN);
+		break;
+	case SOCP_WRITE_PATIENT_HIGH_ALERT_LEVEL:
+	{
+		uint16_t level;
+		uint8_t status = cgms_socp_decode_u16(&req, &level);
+
+		if (status == SOCP_RSP_SUCCESS) {
+			m_alert_levels.patient_high = level;
+		}
+		(void)cgms_socp_send_response(SOCP_RESPONSE_CODE, req.opcode, status, NULL, 0U);
+		break;
+	}
+	case SOCP_READ_PATIENT_HIGH_ALERT_LEVEL:
+		(void)cgms_socp_send_u16_response(SOCP_READ_PATIENT_HIGH_ALERT_LEVEL_RESPONSE,
+						 m_alert_levels.patient_high);
+		break;
+	case SOCP_WRITE_PATIENT_LOW_ALERT_LEVEL:
+	{
+		uint16_t level;
+		uint8_t status = cgms_socp_decode_u16(&req, &level);
+
+		if (status == SOCP_RSP_SUCCESS) {
+			m_alert_levels.patient_low = level;
+		}
+		(void)cgms_socp_send_response(SOCP_RESPONSE_CODE, req.opcode, status, NULL, 0U);
+		break;
+	}
+	case SOCP_READ_PATIENT_LOW_ALERT_LEVEL:
+		(void)cgms_socp_send_u16_response(SOCP_READ_PATIENT_LOW_ALERT_LEVEL_RESPONSE,
+						 m_alert_levels.patient_low);
+		break;
+	case SOCP_SET_HYPO_ALERT_LEVEL:
+	{
+		uint16_t level;
+		uint8_t status = cgms_socp_decode_u16(&req, &level);
+
+		if (status == SOCP_RSP_SUCCESS) {
+			m_alert_levels.hypo = level;
+		}
+		(void)cgms_socp_send_response(SOCP_RESPONSE_CODE, req.opcode, status, NULL, 0U);
+		break;
+	}
+	case SOCP_GET_HYPO_ALERT_LEVEL:
+		(void)cgms_socp_send_u16_response(SOCP_HYPO_ALERT_LEVEL_RESPONSE,
+						 m_alert_levels.hypo);
+		break;
+	case SOCP_SET_HYPER_ALERT_LEVEL:
+	{
+		uint16_t level;
+		uint8_t status = cgms_socp_decode_u16(&req, &level);
+
+		if (status == SOCP_RSP_SUCCESS) {
+			m_alert_levels.hyper = level;
+		}
+		(void)cgms_socp_send_response(SOCP_RESPONSE_CODE, req.opcode, status, NULL, 0U);
+		break;
+	}
+	case SOCP_GET_HYPER_ALERT_LEVEL:
+		(void)cgms_socp_send_u16_response(SOCP_HYPER_ALERT_LEVEL_RESPONSE,
+						 m_alert_levels.hyper);
+		break;
+	case SOCP_SET_RATE_OF_DECREASE_ALERT_LEVEL:
+	{
+		uint16_t level;
+		uint8_t status = cgms_socp_decode_u16(&req, &level);
+
+		if (status == SOCP_RSP_SUCCESS) {
+			m_alert_levels.rate_decrease = level;
+		}
+		(void)cgms_socp_send_response(SOCP_RESPONSE_CODE, req.opcode, status, NULL, 0U);
+		break;
+	}
+	case SOCP_GET_RATE_OF_DECREASE_ALERT_LEVEL:
+		(void)cgms_socp_send_u16_response(SOCP_RATE_OF_DECREASE_ALERT_LEVEL_RESPONSE,
+						 m_alert_levels.rate_decrease);
+		break;
+	case SOCP_SET_RATE_OF_INCREASE_ALERT_LEVEL:
+	{
+		uint16_t level;
+		uint8_t status = cgms_socp_decode_u16(&req, &level);
+
+		if (status == SOCP_RSP_SUCCESS) {
+			m_alert_levels.rate_increase = level;
+		}
+		(void)cgms_socp_send_response(SOCP_RESPONSE_CODE, req.opcode, status, NULL, 0U);
+		break;
+	}
+	case SOCP_GET_RATE_OF_INCREASE_ALERT_LEVEL:
+		(void)cgms_socp_send_u16_response(SOCP_RATE_OF_INCREASE_ALERT_LEVEL_RESPONSE,
+						 m_alert_levels.rate_increase);
+		break;
+	case SOCP_RESET_DEVICE_SPECIFIC_ALERT:
+		m_status.annunciation.status &= (uint8_t)(~NRF_BLE_CGMS_STATUS_DEVICE_SPECIFIC_ALERT);
+		(void)cgms_socp_send_response(SOCP_RESPONSE_CODE, req.opcode, SOCP_RSP_SUCCESS,
+						 NULL, 0U);
 		break;
 	case SOCP_START_THE_SESSION:
 		if (m_session_started) {
-			cgms_socp_send_response(SOCP_RESPONSE_CODE, req.opcode, SOCP_RSP_PROCEDURE_NOT_COMPLETED, NULL, 0U);
+			(void)cgms_socp_send_response(SOCP_RESPONSE_CODE, req.opcode,
+						 SOCP_RSP_PROCEDURE_NOT_COMPLETED, NULL, 0U);
+			break;
+		}
+		if ((m_nb_run_session != 0U) &&
+		    !cgms_feature_present(NRF_BLE_CGMS_FEAT_MULTIPLE_SESSIONS_SUPPORTED)) {
+			(void)cgms_socp_send_response(SOCP_RESPONSE_CODE, req.opcode,
+						 SOCP_RSP_PROCEDURE_NOT_COMPLETED, NULL, 0U);
 			break;
 		}
 		cgms_start_session();
-		cgms_socp_send_response(SOCP_RESPONSE_CODE, req.opcode, SOCP_RSP_SUCCESS, NULL, 0U);
+		(void)cgms_socp_send_response(SOCP_RESPONSE_CODE, req.opcode, SOCP_RSP_SUCCESS,
+						 NULL, 0U);
 		break;
 	case SOCP_STOP_THE_SESSION:
 		cgms_stop_session();
-		cgms_socp_send_response(SOCP_RESPONSE_CODE, req.opcode, SOCP_RSP_SUCCESS, NULL, 0U);
+		(void)cgms_socp_send_response(SOCP_RESPONSE_CODE, req.opcode, SOCP_RSP_SUCCESS,
+						 NULL, 0U);
 		break;
 	default:
-		cgms_socp_send_response(SOCP_RESPONSE_CODE, req.opcode, SOCP_RSP_OP_CODE_NOT_SUPPORTED, NULL, 0U);
+		(void)cgms_socp_send_response(SOCP_RESPONSE_CODE, req.opcode,
+						 SOCP_RSP_OP_CODE_NOT_SUPPORTED, NULL, 0U);
 		break;
 	}
 
@@ -863,12 +1310,24 @@ void ble_cgms_init(void)
 	m_session_started = false;
 	m_nb_run_session = 0U;
 	m_current_offset = 0U;
+	cgms_racp_reset_state();
 	m_status.time_offset = 0U;
 	m_status.annunciation.warning = 0U;
 	m_status.annunciation.calib_temp = 0U;
 	m_status.annunciation.status = NRF_BLE_CGMS_STATUS_SESSION_STOPPED;
 	m_comm_interval = GLUCOSE_MEAS_INTERVAL_MINUTES;
 	m_glucose_concentration = MIN_GLUCOSE_CONCENTRATION;
+	memset(&m_alert_levels, 0, sizeof(m_alert_levels));
+	m_calibration_value[0] = 0x3E;
+	m_calibration_value[1] = 0x00;
+	m_calibration_value[2] = 0x07;
+	m_calibration_value[3] = 0x00;
+	m_calibration_value[4] = 0x06;
+	m_calibration_value[5] = 0x07;
+	m_calibration_value[6] = 0x00;
+	m_calibration_value[7] = 0x00;
+	m_calibration_value[8] = 0x00;
+	m_calibration_value[9] = 0x00;
 	memset(&m_sst, 0, sizeof(m_sst));
 	k_delayed_work_init(&m_glucose_work, cgms_glucose_work_handler);
 	printk("CGMS service initialized\n");
@@ -892,6 +1351,7 @@ void ble_cgms_disconnected(struct bt_conn *conn)
 	m_meas_notify_enabled = false;
 	m_racp_ind_enabled = false;
 	m_socp_ind_enabled = false;
+	cgms_racp_reset_state();
 	cgms_cancel_glucose_work();
 	if (m_session_started) {
 		cgms_schedule_glucose_work();
