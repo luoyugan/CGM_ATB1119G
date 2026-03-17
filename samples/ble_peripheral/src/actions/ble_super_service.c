@@ -224,6 +224,8 @@ enum {
 	CGMS_ATTR_SOCP_CCC,
 };
 
+extern const struct bt_gatt_attr attr_cgms_svc[];
+
 static void cgms_emit_event(ble_cgms_evt_type_t evt_type)
 {
 	ble_cgms_evt_t evt;
@@ -441,7 +443,7 @@ static void cgms_socp_ind_cb(struct bt_conn *conn, struct bt_gatt_indicate_param
 static int cgms_racp_indicate(const uint8_t *data, uint16_t len)
 {
 	if ((m_conn == NULL) || !m_racp_ind_enabled) {
-		return -ENOTCONN;
+		return -1;
 	}
 
 	memcpy(m_racp_ind_buf, data, len);
@@ -456,7 +458,7 @@ static int cgms_racp_indicate(const uint8_t *data, uint16_t len)
 static int cgms_socp_indicate(const uint8_t *data, uint16_t len)
 {
 	if ((m_conn == NULL) || !m_socp_ind_enabled) {
-		return -ENOTCONN;
+		return -1;
 	}
 
 	memcpy(m_socp_ind_buf, data, len);
@@ -474,7 +476,7 @@ static int cgms_measurement_notify(const struct cgms_record *rec)
 	uint8_t len;
 
 	if ((m_conn == NULL) || !m_meas_notify_enabled) {
-		return -ENOTCONN;
+		return -1;
 	}
 
 	len = cgms_encode_measurement(rec, encoded);

@@ -10,14 +10,14 @@
       <TargetName>zephyr</TargetName>
       <ToolsetNumber>0x4</ToolsetNumber>
       <ToolsetName>ARM-ADS</ToolsetName>
-      <pCCUsed>6140000::V6.14::ARMCLANG</pCCUsed>
+      <pCCUsed>6220000::V6.22::ARMCLANG</pCCUsed>
       <uAC6>1</uAC6>
       <TargetOption>
         <TargetCommonOption>
           <Device>ARMCM4</Device>
           <Vendor>ARM</Vendor>
-          <PackID>ARM.CMSIS.5.7.0</PackID>
-          <PackURL>http://www.keil.com/pack/</PackURL>
+          <PackID>ARM.Cortex_DFP.1.1.0</PackID>
+          <PackURL>https://www.keil.com/pack/</PackURL>
           <Cpu>IRAM(0x20000000,0x00020000) IROM(0x00000000,0x00040000) CPUTYPE("Cortex-M4") CLOCK(12000000) ESEL ELITTLE</Cpu>
           <FlashUtilSpec></FlashUtilSpec>
           <StartupFile></StartupFile>
@@ -186,6 +186,7 @@
             <RvdsVP>0</RvdsVP>
             <RvdsMve>0</RvdsMve>
             <RvdsCdeCp>0</RvdsCdeCp>
+            <nBranchProt>0</nBranchProt>
             <hadIRAM2>0</hadIRAM2>
             <hadIROM2>0</hadIROM2>
             <StupSel>8</StupSel>
@@ -336,7 +337,7 @@
             <v6WtE>0</v6WtE>
             <v6Rtti>0</v6Rtti>
             <VariousControls>
-              <MiscControls>-imacros./linker_conf.h -nostdlib -Wno-section </MiscControls>
+              <MiscControls>-imacros./linker_conf.h -nostdlib -Wno-section</MiscControls>
               <Define></Define>
               <Undefine></Undefine>
               <IncludePath>..\src\include;..\..\..\include\rbuf</IncludePath>
@@ -354,7 +355,7 @@
             <useXO>0</useXO>
             <ClangAsOpt>1</ClangAsOpt>
             <VariousControls>
-              <MiscControls>-imacros./linker_conf.h -imacros../src/include/autoconf.h </MiscControls>
+              <MiscControls>-imacros./linker_conf.h -imacros../src/include/autoconf.h</MiscControls>
               <Define>_ASMLANGUAGE</Define>
               <Undefine></Undefine>
               <IncludePath>..\..\..\include\rbuf</IncludePath>
@@ -425,7 +426,7 @@
                 <v6WtE>2</v6WtE>
                 <v6Rtti>2</v6Rtti>
                 <VariousControls>
-                  <MiscControls>-imacros ../src/include/autoconf.h -ffreestanding -fno-common -g -mcpu=cortex-m4 -mthumb -mabi=aapcs -imacros ../../../include/toolchain/zephyr_stdint.h -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wno-main -Wno-pointer-sign -Wpointer-arith -Wno-address-of-packed-member -Werror=implicit-int -fno-asynchronous-unwind-tables -fno-pie -fno-pic -fno-strict-overflow -ffunction-sections -fdata-sections -funwind-tables -std=c99 </MiscControls>
+                  <MiscControls>-imacros ../src/include/autoconf.h -ffreestanding -fno-common -g -mcpu=cortex-m4 -mthumb -mabi=aapcs -imacros ../../../include/toolchain/zephyr_stdint.h -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wno-main -Wno-pointer-sign -Wpointer-arith -Wno-address-of-packed-member -Werror=implicit-int -fno-asynchronous-unwind-tables -fno-pie -fno-pic -fno-strict-overflow -ffunction-sections -fdata-sections -funwind-tables -std=c99</MiscControls>
                   <Define>KERNEL _FORTIFY_SOURCE=2 __PROGRAM_START __ZEPHYR__=1</Define>
                   <Undefine></Undefine>
                   <IncludePath>../../../include;../../../include/generated;../../../soc/arm/actions/tai;../../../lib/crc;../../../drivers;../../../subsys/bluetooth;../../../subsys/settings/include;../../../subsys/trace;../../../../ext/hal/cmsis/CMSIS/Core/Include;../../../ext/crypto/tinycrypt/lib/include;../src/include;../src/profile;../src/main;../../../lib/libc/minimal/include</IncludePath>
@@ -529,7 +530,7 @@
                 <v6WtE>2</v6WtE>
                 <v6Rtti>2</v6Rtti>
                 <VariousControls>
-                  <MiscControls>-imacros ../src/include/autoconf.h -ffreestanding -fno-common -g -mcpu=cortex-m4 -mthumb -mabi=aapcs -imacros ../../../include/toolchain/zephyr_stdint.h -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wno-main -Wno-pointer-sign -Wpointer-arith -Wno-address-of-packed-member -Werror=implicit-int -fno-asynchronous-unwind-tables -fno-pie -fno-pic -fno-strict-overflow -ffunction-sections -fdata-sections -funwind-tables -std=c99 </MiscControls>
+                  <MiscControls>-imacros ../src/include/autoconf.h -ffreestanding -fno-common -g -mcpu=cortex-m4 -mthumb -mabi=aapcs -imacros ../../../include/toolchain/zephyr_stdint.h -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wno-main -Wno-pointer-sign -Wpointer-arith -Wno-address-of-packed-member -Werror=implicit-int -fno-asynchronous-unwind-tables -fno-pie -fno-pic -fno-strict-overflow -ffunction-sections -fdata-sections -funwind-tables -std=c99</MiscControls>
                   <Define>KERNEL _FORTIFY_SOURCE=2 __PROGRAM_START __ZEPHYR__=1</Define>
                   <Undefine></Undefine>
                   <IncludePath>../../../include;../../../include/generated;../../../soc/arm/actions/tai;../../../lib/crc;../../../drivers;../../../subsys/bluetooth;../../../subsys/settings/include;../../../subsys/trace;../../../../ext/hal/cmsis/CMSIS/Core/Include;../../../ext/crypto/tinycrypt/lib/include;../src/include;../src/profile;../src/main;../../../lib/libc/minimal/include</IncludePath>
@@ -618,7 +619,7 @@
                 <v6WtE>2</v6WtE>
                 <v6Rtti>2</v6Rtti>
                 <VariousControls>
-                  <MiscControls>-imacros ../src/include/autoconf.h -ffreestanding -fno-common -g -mcpu=cortex-m4 -mthumb -mabi=aapcs -imacros ../../../include/toolchain/zephyr_stdint.h -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wno-main -Wno-pointer-sign -Wpointer-arith -Wno-address-of-packed-member -Werror=implicit-int -fno-asynchronous-unwind-tables -fno-pie -fno-pic -fno-strict-overflow -ffunction-sections -fdata-sections -funwind-tables -std=c99 </MiscControls>
+                  <MiscControls>-imacros ../src/include/autoconf.h -ffreestanding -fno-common -g -mcpu=cortex-m4 -mthumb -mabi=aapcs -imacros ../../../include/toolchain/zephyr_stdint.h -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wno-main -Wno-pointer-sign -Wpointer-arith -Wno-address-of-packed-member -Werror=implicit-int -fno-asynchronous-unwind-tables -fno-pie -fno-pic -fno-strict-overflow -ffunction-sections -fdata-sections -funwind-tables -std=c99</MiscControls>
                   <Define>KERNEL _FORTIFY_SOURCE=2 __PROGRAM_START __ZEPHYR_SUPERVISOR__ __ZEPHYR__=1</Define>
                   <Undefine></Undefine>
                   <IncludePath>../../../kernel/include;../../../arch/arm/include;../../../include;../../../include/generated;../../../soc/arm/actions/tai;../../../lib/crc/.;../../../drivers;../../../subsys/bluetooth;../../../subsys/settings/include;../../../subsys/trace/.;../../../ext/hal/cmsis/CMSIS/Core/Include;../../../ext/crypto/tinycrypt/lib/include;../src/include;../src/profile;../src/main;../../../lib/libc/minimal/include</IncludePath>
@@ -762,7 +763,7 @@
                 <v6WtE>2</v6WtE>
                 <v6Rtti>2</v6Rtti>
                 <VariousControls>
-                  <MiscControls>-imacros ../src/include/autoconf.h -ffreestanding -fno-common -g -mcpu=cortex-m4 -mthumb -mabi=aapcs -imacros ../../../include/toolchain/zephyr_stdint.h -fno-asynchronous-unwind-tables -fno-pie -fno-pic -fno-strict-overflow -ffunction-sections -fdata-sections -funwind-tables </MiscControls>
+                  <MiscControls>-imacros ../src/include/autoconf.h -ffreestanding -fno-common -g -mcpu=cortex-m4 -mthumb -mabi=aapcs -imacros ../../../include/toolchain/zephyr_stdint.h -fno-asynchronous-unwind-tables -fno-pie -fno-pic -fno-strict-overflow -ffunction-sections -fdata-sections -funwind-tables</MiscControls>
                   <Define>KERNEL _FORTIFY_SOURCE=2 __PROGRAM_START __ZEPHYR_SUPERVISOR__ __ZEPHYR__=1</Define>
                   <Undefine></Undefine>
                   <IncludePath>../../../kernel/include;../../../arch/arm/include;../../../include;../../../include/generated;../../../soc/arm/actions/tai;../../../lib/crc/.;../../../drivers;../../../subsys/bluetooth;../../../subsys/settings/include;../../../subsys/trace/.;../../../ext/hal/cmsis/CMSIS/Core/Include;../../../ext/crypto/tinycrypt/lib/include;../src/include;../src/profile;../src/main;../../../lib/libc/minimal/include</IncludePath>
@@ -881,7 +882,7 @@
                 <v6WtE>2</v6WtE>
                 <v6Rtti>2</v6Rtti>
                 <VariousControls>
-                  <MiscControls>-imacros ../src/include/autoconf.h -ffreestanding -fno-common -g -mcpu=cortex-m4 -mthumb -mabi=aapcs -imacros ../../../include/toolchain/zephyr_stdint.h -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wno-main -Wno-pointer-sign -Wpointer-arith -Wno-address-of-packed-member -Werror=implicit-int -fno-asynchronous-unwind-tables -fno-pie -fno-pic -fno-strict-overflow -ffunction-sections -fdata-sections -funwind-tables -std=c99 </MiscControls>
+                  <MiscControls>-imacros ../src/include/autoconf.h -ffreestanding -fno-common -g -mcpu=cortex-m4 -mthumb -mabi=aapcs -imacros ../../../include/toolchain/zephyr_stdint.h -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wno-main -Wno-pointer-sign -Wpointer-arith -Wno-address-of-packed-member -Werror=implicit-int -fno-asynchronous-unwind-tables -fno-pie -fno-pic -fno-strict-overflow -ffunction-sections -fdata-sections -funwind-tables -std=c99</MiscControls>
                   <Define>KERNEL _FORTIFY_SOURCE=2 __PROGRAM_START __ZEPHYR__=1</Define>
                   <Undefine></Undefine>
                   <IncludePath>../../../kernel/include;../../../arch/arm/include;../../../include;../../../include/generated;../../../soc/arm/actions/tai;../../../lib/crc/.;../../../drivers;../../../subsys/bluetooth;../../../subsys/settings/include;../../../subsys/trace/.;../../../ext/hal/cmsis/CMSIS/Core/Include;../../../ext/crypto/tinycrypt/lib/include;../src/include;../src/profile;../src/main;../../../lib/libc/minimal/include;..\..\..\subsys\power</IncludePath>
@@ -1030,7 +1031,7 @@
                 <v6WtE>2</v6WtE>
                 <v6Rtti>2</v6Rtti>
                 <VariousControls>
-                  <MiscControls>-imacros ../src/include/autoconf.h -ffreestanding -fno-common -g -mcpu=cortex-m4 -mthumb -mabi=aapcs -imacros ../../../include/toolchain/zephyr_stdint.h -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wno-main -Wno-pointer-sign -Wpointer-arith -Wno-address-of-packed-member -Werror=implicit-int -fno-asynchronous-unwind-tables -fno-pie -fno-pic -fno-strict-overflow -ffunction-sections -fdata-sections -funwind-tables -std=c99 </MiscControls>
+                  <MiscControls>-imacros ../src/include/autoconf.h -ffreestanding -fno-common -g -mcpu=cortex-m4 -mthumb -mabi=aapcs -imacros ../../../include/toolchain/zephyr_stdint.h -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wno-main -Wno-pointer-sign -Wpointer-arith -Wno-address-of-packed-member -Werror=implicit-int -fno-asynchronous-unwind-tables -fno-pie -fno-pic -fno-strict-overflow -ffunction-sections -fdata-sections -funwind-tables -std=c99</MiscControls>
                   <Define>KERNEL _FORTIFY_SOURCE=2 __PROGRAM_START __ZEPHYR__=1</Define>
                   <Undefine></Undefine>
                   <IncludePath>../../../drivers;../../../include;../../../include/generated;../../../soc/arm/actions/tai;../../../lib/crc/.;../../../boards/arm/tai_evb/;../../../subsys/bluetooth;../../../subsys/settings/include;../../../subsys/trace/.;../../../ext/hal/cmsis/CMSIS/Core/Include;../../../ext/crypto/tinycrypt/lib/include;../src/include;../src/profile;../src/main;../../../lib/libc/minimal/include</IncludePath>
@@ -1114,7 +1115,7 @@
                 <v6WtE>2</v6WtE>
                 <v6Rtti>2</v6Rtti>
                 <VariousControls>
-                  <MiscControls>-imacros ../src/include/autoconf.h -ffreestanding -fno-common -g -mcpu=cortex-m4 -mthumb -mabi=aapcs -imacros ../../../include/toolchain/zephyr_stdint.h -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wno-main -Wno-pointer-sign -Wpointer-arith -Wno-address-of-packed-member -Werror=implicit-int -fno-asynchronous-unwind-tables -fno-pie -fno-pic -fno-strict-overflow -ffunction-sections -fdata-sections -funwind-tables -std=c99 </MiscControls>
+                  <MiscControls>-imacros ../src/include/autoconf.h -ffreestanding -fno-common -g -mcpu=cortex-m4 -mthumb -mabi=aapcs -imacros ../../../include/toolchain/zephyr_stdint.h -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wno-main -Wno-pointer-sign -Wpointer-arith -Wno-address-of-packed-member -Werror=implicit-int -fno-asynchronous-unwind-tables -fno-pie -fno-pic -fno-strict-overflow -ffunction-sections -fdata-sections -funwind-tables -std=c99</MiscControls>
                   <Define>KERNEL _FORTIFY_SOURCE=2 __PROGRAM_START __ZEPHYR_SUPERVISOR__ __ZEPHYR__=1</Define>
                   <Undefine></Undefine>
                   <IncludePath>../../../kernel/include;../../../arch/arm/include;../../../include;../../../include/generated;../../../soc/arm/actions/tai;../../../lib/crc/.;../../../drivers;../../../subsys/bluetooth;../../../subsys/settings/include;../../../subsys/trace/.;../../../ext/hal/cmsis/CMSIS/Core/Include;../../../ext/crypto/tinycrypt/lib/include;../src/include;../src/profile;../src/main;../../../lib/libc/minimal/include;..\..\..\include\kernel</IncludePath>
@@ -1313,7 +1314,7 @@
                 <v6WtE>2</v6WtE>
                 <v6Rtti>2</v6Rtti>
                 <VariousControls>
-                  <MiscControls>-imacros ../src/include/autoconf.h -ffreestanding -fno-common -g -mcpu=cortex-m4 -mthumb -mabi=aapcs -imacros ../../../include/toolchain/zephyr_stdint.h -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wno-main -Wno-pointer-sign -Wpointer-arith -Wno-address-of-packed-member -Werror=implicit-int -fno-asynchronous-unwind-tables -fno-pie -fno-pic -fno-strict-overflow -ffunction-sections -fdata-sections -funwind-tables -std=c99 </MiscControls>
+                  <MiscControls>-imacros ../src/include/autoconf.h -ffreestanding -fno-common -g -mcpu=cortex-m4 -mthumb -mabi=aapcs -imacros ../../../include/toolchain/zephyr_stdint.h -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wno-main -Wno-pointer-sign -Wpointer-arith -Wno-address-of-packed-member -Werror=implicit-int -fno-asynchronous-unwind-tables -fno-pie -fno-pic -fno-strict-overflow -ffunction-sections -fdata-sections -funwind-tables -std=c99</MiscControls>
                   <Define>KERNEL _FORTIFY_SOURCE=2 __PROGRAM_START __ZEPHYR_SUPERVISOR__ __ZEPHYR__=1</Define>
                   <Undefine></Undefine>
                   <IncludePath>../../../include;../../../include/generated;../../../lib/crc/.;../../../drivers;../../../subsys/bluetooth;../../../subsys/settings/include;../../../subsys/trace/.;../../../ext/hal/cmsis/CMSIS/Core/Include;../../../ext/crypto/tinycrypt/lib/include;../src/include;../src/profile;../src/main;../../../lib/libc/minimal/include;../../../boards/arm/tai_evb;../../../drivers/ipmsg/tai;..\..\..\soc\arm\actions\tai</IncludePath>
@@ -1447,7 +1448,7 @@
                 <v6WtE>2</v6WtE>
                 <v6Rtti>2</v6Rtti>
                 <VariousControls>
-                  <MiscControls>-imacros ../src/include/autoconf.h -ffreestanding -fno-common -g -mcpu=cortex-m4 -mthumb -mabi=aapcs -imacros ../../../include/toolchain/zephyr_stdint.h -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wno-main -Wno-pointer-sign -Wpointer-arith -Wno-address-of-packed-member -Werror=implicit-int -fno-asynchronous-unwind-tables -fno-pie -fno-pic -fno-strict-overflow -ffunction-sections -fdata-sections -funwind-tables -std=c99 </MiscControls>
+                  <MiscControls>-imacros ../src/include/autoconf.h -ffreestanding -fno-common -g -mcpu=cortex-m4 -mthumb -mabi=aapcs -imacros ../../../include/toolchain/zephyr_stdint.h -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wno-main -Wno-pointer-sign -Wpointer-arith -Wno-address-of-packed-member -Werror=implicit-int -fno-asynchronous-unwind-tables -fno-pie -fno-pic -fno-strict-overflow -ffunction-sections -fdata-sections -funwind-tables -std=c99</MiscControls>
                   <Define>KERNEL _FORTIFY_SOURCE=2 __PROGRAM_START __ZEPHYR__=1</Define>
                   <Undefine></Undefine>
                   <IncludePath>../../../kernel/include;../../../arch/arm/include;../../../include;../../../include/generated;../../../soc/arm/actions/tai;../../../lib/crc/.;../../../drivers;../../../subsys/bluetooth;../../../subsys/settings/include;../../../subsys/trace/.;../../../ext/hal/cmsis/CMSIS/Core/Include;../../../ext/crypto/tinycrypt/lib/include;../src/include;../src/profile;../src/main;../../../lib/libc/minimal/include;..\..\..\subsys\power</IncludePath>
@@ -1721,7 +1722,7 @@
                 <v6WtE>2</v6WtE>
                 <v6Rtti>2</v6Rtti>
                 <VariousControls>
-                  <MiscControls>-imacros ../src/include/autoconf.h -ffreestanding -fno-common -g -mcpu=cortex-m4 -mthumb -mabi=aapcs -imacros ../../../include/toolchain/zephyr_stdint.h -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wno-main -Wno-pointer-sign -Wpointer-arith -Wno-address-of-packed-member -Werror=implicit-int -fno-asynchronous-unwind-tables -fno-pie -fno-pic -fno-strict-overflow -ffunction-sections -fdata-sections -funwind-tables -std=c99 </MiscControls>
+                  <MiscControls>-imacros ../src/include/autoconf.h -ffreestanding -fno-common -g -mcpu=cortex-m4 -mthumb -mabi=aapcs -imacros ../../../include/toolchain/zephyr_stdint.h -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wno-main -Wno-pointer-sign -Wpointer-arith -Wno-address-of-packed-member -Werror=implicit-int -fno-asynchronous-unwind-tables -fno-pie -fno-pic -fno-strict-overflow -ffunction-sections -fdata-sections -funwind-tables -std=c99</MiscControls>
                   <Define>KERNEL _FORTIFY_SOURCE=2 __PROGRAM_START __ZEPHYR__=1</Define>
                   <Undefine></Undefine>
                   <IncludePath>../../../include;../../../include/generated;../../../soc/arm/actions/tai;../../../lib/crc/.;../../../drivers;../../../subsys/bluetooth;../../../subsys/settings/include;../../../subsys/trace/.;../../../ext/hal/cmsis/CMSIS/Core/Include;../../../ext/crypto/tinycrypt/lib/include;../src/include;../src/profile;../src/main;../../../lib/libc/minimal/include</IncludePath>
@@ -1875,7 +1876,7 @@
                 <v6WtE>2</v6WtE>
                 <v6Rtti>2</v6Rtti>
                 <VariousControls>
-                  <MiscControls>-imacros ../src/include/autoconf.h -ffreestanding -fno-common -g -mcpu=cortex-m4 -mthumb -mabi=aapcs -imacros ../../../include/toolchain/zephyr_stdint.h -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wno-main -Wno-pointer-sign -Wpointer-arith -Wno-address-of-packed-member -Werror=implicit-int -fno-asynchronous-unwind-tables -fno-pie -fno-pic -fno-strict-overflow -ffunction-sections -fdata-sections -funwind-tables -std=c99 </MiscControls>
+                  <MiscControls>-imacros ../src/include/autoconf.h -ffreestanding -fno-common -g -mcpu=cortex-m4 -mthumb -mabi=aapcs -imacros ../../../include/toolchain/zephyr_stdint.h -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wno-main -Wno-pointer-sign -Wpointer-arith -Wno-address-of-packed-member -Werror=implicit-int -fno-asynchronous-unwind-tables -fno-pie -fno-pic -fno-strict-overflow -ffunction-sections -fdata-sections -funwind-tables -std=c99</MiscControls>
                   <Define>KERNEL _FORTIFY_SOURCE=2 __PROGRAM_START __ZEPHYR__=1</Define>
                   <Undefine></Undefine>
                   <IncludePath>../../../kernel/include;../../../arch/arm/include;../../../include;../../../include/generated;../../../soc/arm/actions/tai;../../../lib/crc/.;../../../drivers;../../../subsys/bluetooth;../../../subsys/settings/include;../../../subsys/trace/.;../../../ext/hal/cmsis/CMSIS/Core/Include;../../../ext/crypto/tinycrypt/lib/include;../src/include;../src/profile;../src/main;../../../lib/libc/minimal/include;..\..\..\lib\rbuf;..\..\..\include\rbuf</IncludePath>
@@ -1979,7 +1980,7 @@
                 <v6WtE>2</v6WtE>
                 <v6Rtti>2</v6Rtti>
                 <VariousControls>
-                  <MiscControls>-imacros ../src/include/autoconf.h -ffreestanding -fno-common -g -mcpu=cortex-m4 -mthumb -mabi=aapcs -imacros ../../../include/toolchain/zephyr_stdint.h -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wno-main -Wno-pointer-sign -Wpointer-arith -Wno-address-of-packed-member -Werror=implicit-int -fno-asynchronous-unwind-tables -fno-pie -fno-pic -fno-strict-overflow -ffunction-sections -fdata-sections -funwind-tables -std=c99 </MiscControls>
+                  <MiscControls>-imacros ../src/include/autoconf.h -ffreestanding -fno-common -g -mcpu=cortex-m4 -mthumb -mabi=aapcs -imacros ../../../include/toolchain/zephyr_stdint.h -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wno-main -Wno-pointer-sign -Wpointer-arith -Wno-address-of-packed-member -Werror=implicit-int -fno-asynchronous-unwind-tables -fno-pie -fno-pic -fno-strict-overflow -ffunction-sections -fdata-sections -funwind-tables -std=c99</MiscControls>
                   <Define>KERNEL _FORTIFY_SOURCE=2 __PROGRAM_START __ZEPHYR__=1</Define>
                   <Undefine></Undefine>
                   <IncludePath>../../../include;../../../include/generated;../../../soc/arm/actions/tai;../../../lib/crc/.;../../../drivers;../../../subsys/bluetooth;../../../subsys/settings/include;../../../subsys/trace/.;../../../ext/hal/cmsis/CMSIS/Core/Include;../../../ext/crypto/tinycrypt/lib/include;../src/include;../src/profile;../src/main;../../../lib/libc/minimal/include</IncludePath>
@@ -2133,7 +2134,7 @@
                 <v6WtE>2</v6WtE>
                 <v6Rtti>2</v6Rtti>
                 <VariousControls>
-                  <MiscControls>-imacros ../src/include/autoconf.h -ffreestanding -fno-common -g -mcpu=cortex-m4 -mthumb -mabi=aapcs -imacros ../../../include/toolchain/zephyr_stdint.h -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wno-main -Wno-pointer-sign -Wpointer-arith -Wno-address-of-packed-member -Werror=implicit-int -fno-asynchronous-unwind-tables -fno-pie -fno-pic -fno-strict-overflow -ffunction-sections -fdata-sections -funwind-tables -std=c99 </MiscControls>
+                  <MiscControls>-imacros ../src/include/autoconf.h -ffreestanding -fno-common -g -mcpu=cortex-m4 -mthumb -mabi=aapcs -imacros ../../../include/toolchain/zephyr_stdint.h -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wno-main -Wno-pointer-sign -Wpointer-arith -Wno-address-of-packed-member -Werror=implicit-int -fno-asynchronous-unwind-tables -fno-pie -fno-pic -fno-strict-overflow -ffunction-sections -fdata-sections -funwind-tables -std=c99</MiscControls>
                   <Define>KERNEL _FORTIFY_SOURCE=2 __PROGRAM_START __ZEPHYR__=1</Define>
                   <Undefine></Undefine>
                   <IncludePath>../../../include;../../../include/generated;../../../soc/arm/actions/tai;../../../lib/crc/.;../../../drivers;../../../subsys/bluetooth;../../../subsys/settings/include;../../../subsys/trace/.;../../../ext/hal/cmsis/CMSIS/Core/Include;../../../ext/crypto/tinycrypt/lib/include;../src/include;../src/profile;../src/main;../../../lib/libc/minimal/include</IncludePath>
@@ -2194,11 +2195,6 @@
     <Layers>
       <Layer>
         <LayName>&lt;Project Info&gt;</LayName>
-        <LayDesc></LayDesc>
-        <LayUrl></LayUrl>
-        <LayKeys></LayKeys>
-        <LayCat></LayCat>
-        <LayLic></LayLic>
         <LayTarg>0</LayTarg>
         <LayPrjMark>1</LayPrjMark>
       </Layer>
