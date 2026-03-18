@@ -2,37 +2,29 @@
   linker_conf.h ..\src\include\autoconf.h ..\src\include\autoconf_app.h \
   ..\src\include\atb1113_46k.h \
   ..\..\..\include\toolchain\zephyr_stdint.h \
-  ..\..\..\lib\libc\minimal\include\errno.h \
-  ..\..\..\include\sys\errno_private.h ..\..\..\include\toolchain.h \
-  ..\..\..\include\toolchain\gcc.h ..\..\..\include\toolchain\common.h \
+  ..\src\include\ble_super_service.h ..\src\include\atb_ble_cgms.h \
   ..\..\..\lib\libc\minimal\include\stdbool.h \
-  ..\..\..\include\generated\syscalls\errno_private.h \
-  ..\..\..\include\generated\syscall_list.h \
-  ..\..\..\lib\libc\minimal\include\stdint.h ..\..\..\include\syscall.h \
+  ..\..\..\lib\libc\minimal\include\stdint.h ..\..\..\include\zephyr.h \
+  ..\..\..\include\kernel.h ..\..\..\include\kernel_includes.h \
+  ..\..\..\include\zephyr\types.h \
+  ..\..\..\lib\libc\minimal\include\limits.h \
+  ..\..\..\include\toolchain.h ..\..\..\include\toolchain\gcc.h \
+  ..\..\..\include\toolchain\common.h ..\..\..\include\linker\sections.h \
+  ..\..\..\include\linker\section_tags.h ..\..\..\include\sys\atomic.h \
+  ..\..\..\include\sys\__assert.h ..\..\..\include\sched_priq.h \
+  ..\..\..\include\sys\util.h ..\..\..\include\sys\util_macro.h \
+  ..\..\..\include\sys\util_internal.h ..\..\..\include\sys\dlist.h \
+  ..\..\..\include\sys\rb.h ..\..\..\include\sys\slist.h \
+  ..\..\..\include\sys\list_gen.h ..\..\..\include\sys\sflist.h \
+  ..\..\..\include\kernel_structs.h ..\..\..\include\sys\sys_heap.h \
+  ..\..\..\include\mempool_heap.h ..\..\..\include\kernel_version.h \
+  ..\..\..\include\syscall.h ..\..\..\include\generated\syscall_list.h \
   ..\..\..\include\arch\syscall.h \
   ..\..\..\include\arch\arm\aarch32\syscall.h \
-  ..\..\..\include\zephyr\types.h \
-  ..\..\..\lib\libc\minimal\include\string.h \
-  ..\..\..\lib\libc\minimal\include\bits\restrict.h \
-  ..\..\..\lib\libc\minimal\include\time.h \
-  ..\..\..\lib\libc\minimal\include\sys\_types.h \
-  ..\..\..\lib\libc\minimal\include\sys\_timespec.h \
-  ..\..\..\include\sys\byteorder.h ..\..\..\include\sys\__assert.h \
   ..\..\..\include\sys\printk.h \
-  ..\..\..\lib\libc\minimal\include\inttypes.h ..\..\..\include\zephyr.h \
-  ..\..\..\include\kernel.h ..\..\..\include\kernel_includes.h \
-  ..\..\..\lib\libc\minimal\include\limits.h \
-  ..\..\..\include\linker\sections.h \
-  ..\..\..\include\linker\section_tags.h ..\..\..\include\sys\atomic.h \
-  ..\..\..\include\sched_priq.h ..\..\..\include\sys\util.h \
-  ..\..\..\include\sys\util_macro.h ..\..\..\include\sys\util_internal.h \
-  ..\..\..\include\sys\dlist.h ..\..\..\include\sys\rb.h \
-  ..\..\..\include\sys\slist.h ..\..\..\include\sys\list_gen.h \
-  ..\..\..\include\sys\sflist.h ..\..\..\include\kernel_structs.h \
-  ..\..\..\include\sys\sys_heap.h ..\..\..\include\mempool_heap.h \
-  ..\..\..\include\kernel_version.h ..\..\..\include\arch\cpu.h \
-  ..\..\..\include\sys\arch_interface.h ..\..\..\include\irq_offload.h \
-  ..\..\..\include\arch\arch_inlines.h \
+  ..\..\..\lib\libc\minimal\include\inttypes.h \
+  ..\..\..\include\arch\cpu.h ..\..\..\include\sys\arch_interface.h \
+  ..\..\..\include\irq_offload.h ..\..\..\include\arch\arch_inlines.h \
   ..\..\..\include\arch\arm\aarch32\arch.h \
   ..\..\..\include\arch\arm\aarch32\thread.h \
   ..\..\..\include\arch\arm\aarch32\exc.h \
@@ -57,13 +49,24 @@
   ..\..\..\include\kernel\thread.h ..\..\..\include\sys\kobject.h \
   ..\..\..\include\generated\kobj-types-enum.h \
   ..\..\..\include\generated\syscalls\kobject.h \
+  ..\..\..\lib\libc\minimal\include\errno.h \
+  ..\..\..\include\sys\errno_private.h \
+  ..\..\..\include\generated\syscalls\errno_private.h \
   ..\..\..\include\tracing\tracing.h \
   ..\..\..\include\generated\syscalls\kernel.h \
-  ..\..\..\include\bluetooth\att.h \
-  ..\..\..\include\bluetooth\bluetooth.h ..\..\..\include\net\buf.h \
-  ..\..\..\include\bluetooth\gap.h ..\..\..\include\bluetooth\addr.h \
-  ..\..\..\include\bluetooth\crypto.h ..\..\..\include\bluetooth\conn.h \
+  ..\..\..\include\bluetooth\conn.h \
+  ..\..\..\include\bluetooth\bluetooth.h \
+  ..\..\..\lib\libc\minimal\include\string.h \
+  ..\..\..\lib\libc\minimal\include\bits\restrict.h \
+  ..\..\..\include\net\buf.h ..\..\..\include\bluetooth\gap.h \
+  ..\..\..\include\bluetooth\addr.h ..\..\..\include\bluetooth\crypto.h \
   ..\..\..\include\bluetooth\hci_err.h ..\..\..\include\bluetooth\gatt.h \
   ..\..\..\lib\libc\minimal\include\sys\types.h \
-  ..\..\..\include\bluetooth\uuid.h ..\src\include\ble_super_service.h \
-  ..\src\include\ble_data_test_sample.h
+  ..\..\..\lib\libc\minimal\include\sys\_types.h \
+  ..\..\..\include\bluetooth\uuid.h ..\..\..\include\bluetooth\att.h \
+  ..\src\actions\cgms_db.c ..\src\include\cgms_db.h \
+  ..\src\actions\cgms_sst.c ..\src\include\cgms_sst.h \
+  ..\src\actions\cgms_meas.c ..\src\include\cgms_meas.h \
+  ..\src\actions\cgms_racp.c ..\src\include\cgms_racp.h \
+  ..\src\actions\cgms_socp.c ..\src\include\cgms_socp.h \
+  ..\src\actions\atb_ble_cgms.c

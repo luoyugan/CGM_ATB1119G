@@ -71,6 +71,6 @@
   ..\..\..\include\generated\syscalls\device.h \
   ..\..\..\include\drivers\input\input_dev.h \
   ..\src\include\ble_data_test_sample.h \
-  ..\src\include\ble_super_service.h \
+  ..\src\include\ble_super_service.h ..\src\include\atb_ble_cgms.h \
   ..\..\..\soc\arm\actions\tai\soc_clock.h \
   ..\..\..\soc\arm\actions\tai\soc_pm.h

@@ -23,6 +23,7 @@
 #include "ble_super_service.h"
 #include "soc_clock.h"
 #include "soc_pm.h"
+#include "atb_ble_cgms.h"
 
 #define DEVICE_NAME "CGMS_Demo"
 //#define DEVICE_NAME			CONFIG_BT_DEVICE_NAME

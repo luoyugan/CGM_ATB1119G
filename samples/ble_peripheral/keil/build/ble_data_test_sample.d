@@ -61,4 +61,8 @@
   ..\..\..\include\net\buf.h ..\..\..\include\bluetooth\gap.h \
   ..\..\..\include\bluetooth\addr.h ..\..\..\include\bluetooth\crypto.h \
   ..\..\..\include\bluetooth\hci_err.h \
-  ..\src\include\ble_super_service.h
+  ..\src\include\ble_super_service.h ..\src\include\atb_ble_cgms.h \
+  ..\..\..\include\bluetooth\gatt.h \
+  ..\..\..\lib\libc\minimal\include\sys\types.h \
+  ..\..\..\lib\libc\minimal\include\sys\_types.h \
+  ..\..\..\include\bluetooth\uuid.h ..\..\..\include\bluetooth\att.h
