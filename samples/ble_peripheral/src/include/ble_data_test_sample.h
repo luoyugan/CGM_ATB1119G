@@ -13,7 +13,6 @@
 
 void update_write_stats(uint16_t len);
 
-void bt_data_trans_init();
 void bt_data_submit_handle(struct bt_conn *conn, uint16_t index);
 void bt_data_trans_cancel(void);
 

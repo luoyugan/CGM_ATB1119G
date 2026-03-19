@@ -105,7 +105,7 @@ I (..\..\..\include\sys\device_mmio.h)(0x662DEF3C)
 I (..\..\..\include\sys\mem_manage.h)(0x662DEF3C)
 I (..\..\..\include\generated\syscalls\device.h)(0x662DEF3B)
 I (..\..\..\include\drivers\input\input_dev.h)(0x6715FF55)
-F (..\src\actions\bt_le_op.c)(0x69BA22C3)(-xc -std=c99 --target=arm-arm-none-eabi -mcpu=cortex-m4 -mfpu=none -mfloat-abi=soft -c-fno-rtti -funsigned-char -fshort-enums -fshort-wchar-D__MICROLIB -mlittle-endian -gdwarf-4 -Oz -ffunction-sections -Wno-packed -Wno-missing-variable-declarations -Wno-missing-prototypes -Wno-missing-noreturn -Wno-sign-conversion -Wno-nonportable-include-path -Wno-reserved-id-macro -Wno-unused-macros -Wno-documentation-unknown-command -Wno-documentation -Wno-license-management -Wno-parentheses-equality -Wno-reserved-identifier -I ../../../include -I ../../../include/generated -I ../../../soc/arm/actions/tai -I ../../../lib/crc -I ../../../drivers -I ../../../subsys/bluetooth -I ../../../subsys/settings/include -I ../../../subsys/trace -I ../../../../ext/hal/cmsis/CMSIS/Core/Include -I ../../../ext/crypto/tinycrypt/lib/include -I ../src/include -I ../src/profile -I ../src/main -I ../../../lib/libc/minimal/include -I ../src/include -I ../../../include/rbuf -imacros./linker_conf.h -nostdlib -Wno-section -imacros ../src/include/autoconf.h -ffreestanding -fno-common -g -mcpu=cortex-m4 -mthumb -mabi=aapcs -imacros ../../../include/toolchain/zephyr_stdint.h -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wno-main -Wno-pointer-sign -Wpointer-arith -Wno-address-of-packed-member -Werror=implicit-int -fno-asynchronous-unwind-tables -fno-pie -fno-pic -fno-strict-overflow -ffunction-sections -fdata-sections -funwind-tables -std=c99-IE:/app/keil/ARM/Cortex_DFP/1.1.0/Device/ARMCM4/Include-IE:/app/keil/ARM/Cortex_DFP/1.1.0/Device/ARM/ARMCM4/Include-D__UVISION_VERSION="540" -DARMCM4 -DKERNEL -D_FORTIFY_SOURCE="2" -D__PROGRAM_START -D__ZEPHYR__="1"-o ./build/bt_le_op.o -MMD)
+F (..\src\actions\bt_le_op.c)(0x69BBC63C)(-xc -std=c99 --target=arm-arm-none-eabi -mcpu=cortex-m4 -mfpu=none -mfloat-abi=soft -c-fno-rtti -funsigned-char -fshort-enums -fshort-wchar-D__MICROLIB -mlittle-endian -gdwarf-4 -Oz -ffunction-sections -Wno-packed -Wno-missing-variable-declarations -Wno-missing-prototypes -Wno-missing-noreturn -Wno-sign-conversion -Wno-nonportable-include-path -Wno-reserved-id-macro -Wno-unused-macros -Wno-documentation-unknown-command -Wno-documentation -Wno-license-management -Wno-parentheses-equality -Wno-reserved-identifier -I ../../../include -I ../../../include/generated -I ../../../soc/arm/actions/tai -I ../../../lib/crc -I ../../../drivers -I ../../../subsys/bluetooth -I ../../../subsys/settings/include -I ../../../subsys/trace -I ../../../../ext/hal/cmsis/CMSIS/Core/Include -I ../../../ext/crypto/tinycrypt/lib/include -I ../src/include -I ../src/profile -I ../src/main -I ../../../lib/libc/minimal/include -I ../src/include -I ../../../include/rbuf -imacros./linker_conf.h -nostdlib -Wno-section -imacros ../src/include/autoconf.h -ffreestanding -fno-common -g -mcpu=cortex-m4 -mthumb -mabi=aapcs -imacros ../../../include/toolchain/zephyr_stdint.h -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wno-main -Wno-pointer-sign -Wpointer-arith -Wno-address-of-packed-member -Werror=implicit-int -fno-asynchronous-unwind-tables -fno-pie -fno-pic -fno-strict-overflow -ffunction-sections -fdata-sections -funwind-tables -std=c99-IE:/app/keil/ARM/Cortex_DFP/1.1.0/Device/ARMCM4/Include-IE:/app/keil/ARM/Cortex_DFP/1.1.0/Device/ARM/ARMCM4/Include-D__UVISION_VERSION="540" -DARMCM4 -DKERNEL -D_FORTIFY_SOURCE="2" -D__PROGRAM_START -D__ZEPHYR__="1"-o ./build/bt_le_op.o -MMD)
 I (linker_conf.h)(0x63744BE8)
 I (..\src\include\autoconf.h)(0x69088656)
 I (..\src\include\autoconf_app.h)(0x690865B2)
@@ -206,9 +206,9 @@ I (..\..\..\include\sys\device_mmio.h)(0x662DEF3C)
 I (..\..\..\include\sys\mem_manage.h)(0x662DEF3C)
 I (..\..\..\include\generated\syscalls\device.h)(0x662DEF3B)
 I (..\..\..\include\drivers\input\input_dev.h)(0x6715FF55)
-I (..\src\include\ble_data_test_sample.h)(0x69B8CBA3)
+I (..\src\include\ble_data_test_sample.h)(0x69BBC589)
 I (..\src\include\ble_super_service.h)(0x69BA22F9)
-I (..\src\include\atb_ble_cgms.h)(0x69BA43C8)
+I (..\src\include\atb_ble_cgms.h)(0x69BBC4D1)
 I (..\..\..\soc\arm\actions\tai\soc_clock.h)(0x6715FF56)
 I (..\..\..\soc\arm\actions\tai\soc_pm.h)(0x6715FF56)
 F (..\src\actions\ble_super_service.c)(0x69BA2332)(-xc -std=c99 --target=arm-arm-none-eabi -mcpu=cortex-m4 -mfpu=none -mfloat-abi=soft -c-fno-rtti -funsigned-char -fshort-enums -fshort-wchar-D__MICROLIB -mlittle-endian -gdwarf-4 -Oz -ffunction-sections -Wno-packed -Wno-missing-variable-declarations -Wno-missing-prototypes -Wno-missing-noreturn -Wno-sign-conversion -Wno-nonportable-include-path -Wno-reserved-id-macro -Wno-unused-macros -Wno-documentation-unknown-command -Wno-documentation -Wno-license-management -Wno-parentheses-equality -Wno-reserved-identifier -I ../../../include -I ../../../include/generated -I ../../../soc/arm/actions/tai -I ../../../lib/crc -I ../../../drivers -I ../../../subsys/bluetooth -I ../../../subsys/settings/include -I ../../../subsys/trace -I ../../../../ext/hal/cmsis/CMSIS/Core/Include -I ../../../ext/crypto/tinycrypt/lib/include -I ../src/include -I ../src/profile -I ../src/main -I ../../../lib/libc/minimal/include -I ../src/include -I ../../../include/rbuf -imacros./linker_conf.h -nostdlib -Wno-section -imacros ../src/include/autoconf.h -ffreestanding -fno-common -g -mcpu=cortex-m4 -mthumb -mabi=aapcs -imacros ../../../include/toolchain/zephyr_stdint.h -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wno-main -Wno-pointer-sign -Wpointer-arith -Wno-address-of-packed-member -Werror=implicit-int -fno-asynchronous-unwind-tables -fno-pie -fno-pic -fno-strict-overflow -ffunction-sections -fdata-sections -funwind-tables -std=c99-IE:/app/keil/ARM/Cortex_DFP/1.1.0/Device/ARMCM4/Include-IE:/app/keil/ARM/Cortex_DFP/1.1.0/Device/ARM/ARMCM4/Include-D__UVISION_VERSION="540" -DARMCM4 -DKERNEL -D_FORTIFY_SOURCE="2" -D__PROGRAM_START -D__ZEPHYR__="1"-o ./build/ble_super_service.o -MMD)
@@ -218,7 +218,7 @@ I (..\src\include\autoconf_app.h)(0x690865B2)
 I (..\src\include\atb1113_46k.h)(0x69003A41)
 I (..\..\..\include\toolchain\zephyr_stdint.h)(0x619DFF24)
 I (..\src\include\ble_super_service.h)(0x69BA22F9)
-I (..\src\include\atb_ble_cgms.h)(0x69BA43C8)
+I (..\src\include\atb_ble_cgms.h)(0x69BBC4D1)
 I (..\..\..\lib\libc\minimal\include\stdbool.h)(0x619DFF24)
 I (..\..\..\lib\libc\minimal\include\stdint.h)(0x662DEF3C)
 I (..\..\..\include\zephyr.h)(0x619DFF24)
@@ -304,17 +304,19 @@ I (..\..\..\lib\libc\minimal\include\sys\types.h)(0x662DEF3C)
 I (..\..\..\lib\libc\minimal\include\sys\_types.h)(0x619DFF24)
 I (..\..\..\include\bluetooth\uuid.h)(0x662DEF3B)
 I (..\..\..\include\bluetooth\att.h)(0x662DEF3B)
-I (..\src\actions\cgms_db.c)(0x69BA43AC)
-I (..\src\include\cgms_db.h)(0x69BA43AC)
-I (..\src\actions\cgms_sst.c)(0x69BA43AC)
-I (..\src\include\cgms_sst.h)(0x69BA43AC)
-I (..\src\actions\cgms_meas.c)(0x69BA43AC)
-I (..\src\include\cgms_meas.h)(0x69BA43AC)
-I (..\src\actions\cgms_racp.c)(0x69BA43AC)
-I (..\src\include\cgms_racp.h)(0x69BA43AE)
-I (..\src\actions\cgms_socp.c)(0x69BA43AC)
+I (..\src\actions\cgms_db.c)(0x69BB9ADA)
+I (..\src\include\cgms_db.h)(0x69BB9AE0)
+I (..\src\actions\cgms_sst.c)(0x69BBA27C)
+I (..\..\..\lib\libc\minimal\include\time.h)(0x662DEF3C)
+I (..\..\..\lib\libc\minimal\include\sys\_timespec.h)(0x619DFF24)
+I (..\src\include\cgms_sst.h)(0x69BA75D9)
+I (..\src\actions\cgms_meas.c)(0x69BBB316)
+I (..\src\include\cgms_meas.h)(0x69BBA280)
+I (..\src\actions\cgms_racp.c)(0x69BB9CB9)
+I (..\src\include\cgms_racp.h)(0x69BB8ED5)
+I (..\src\actions\cgms_socp.c)(0x69BA75DB)
 I (..\src\include\cgms_socp.h)(0x69BA43AC)
-I (..\src\actions\atb_ble_cgms.c)(0x69BA43AC)
+I (..\src\actions\atb_ble_cgms.c)(0x69BBC512)
 F (..\src\main\msg_manager.c)(0x63805EF2)(-xc -std=c99 --target=arm-arm-none-eabi -mcpu=cortex-m4 -mfpu=none -mfloat-abi=soft -c-fno-rtti -funsigned-char -fshort-enums -fshort-wchar-D__MICROLIB -mlittle-endian -gdwarf-4 -Oz -ffunction-sections -Wno-packed -Wno-missing-variable-declarations -Wno-missing-prototypes -Wno-missing-noreturn -Wno-sign-conversion -Wno-nonportable-include-path -Wno-reserved-id-macro -Wno-unused-macros -Wno-documentation-unknown-command -Wno-documentation -Wno-license-management -Wno-parentheses-equality -Wno-reserved-identifier -I ../../../include -I ../../../include/generated -I ../../../soc/arm/actions/tai -I ../../../lib/crc -I ../../../drivers -I ../../../subsys/bluetooth -I ../../../subsys/settings/include -I ../../../subsys/trace -I ../../../../ext/hal/cmsis/CMSIS/Core/Include -I ../../../ext/crypto/tinycrypt/lib/include -I ../src/include -I ../src/profile -I ../src/main -I ../../../lib/libc/minimal/include -I ../src/include -I ../../../include/rbuf -imacros./linker_conf.h -nostdlib -Wno-section -imacros ../src/include/autoconf.h -ffreestanding -fno-common -g -mcpu=cortex-m4 -mthumb -mabi=aapcs -imacros ../../../include/toolchain/zephyr_stdint.h -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wno-main -Wno-pointer-sign -Wpointer-arith -Wno-address-of-packed-member -Werror=implicit-int -fno-asynchronous-unwind-tables -fno-pie -fno-pic -fno-strict-overflow -ffunction-sections -fdata-sections -funwind-tables -std=c99-IE:/app/keil/ARM/Cortex_DFP/1.1.0/Device/ARMCM4/Include-IE:/app/keil/ARM/Cortex_DFP/1.1.0/Device/ARM/ARMCM4/Include-D__UVISION_VERSION="540" -DARMCM4 -DKERNEL -D_FORTIFY_SOURCE="2" -D__PROGRAM_START -D__ZEPHYR__="1"-o ./build/msg_manager.o -MMD)
 I (linker_conf.h)(0x63744BE8)
 I (..\src\include\autoconf.h)(0x69088656)
@@ -513,7 +515,7 @@ I (..\..\..\include\logging\log_msg.h)(0x662DEF3B)
 I (..\..\..\lib\libc\minimal\include\string.h)(0x662DEF3C)
 I (..\..\..\lib\libc\minimal\include\bits\restrict.h)(0x619DFF24)
 I (..\..\..\include\generated\syscalls\log_core.h)(0x662DEF3B)
-F (..\src\actions\ble_data_test_sample.c)(0x69B8CBA3)(-xc -std=c99 --target=arm-arm-none-eabi -mcpu=cortex-m4 -mfpu=none -mfloat-abi=soft -c-fno-rtti -funsigned-char -fshort-enums -fshort-wchar-D__MICROLIB -mlittle-endian -gdwarf-4 -Oz -ffunction-sections -Wno-packed -Wno-missing-variable-declarations -Wno-missing-prototypes -Wno-missing-noreturn -Wno-sign-conversion -Wno-nonportable-include-path -Wno-reserved-id-macro -Wno-unused-macros -Wno-documentation-unknown-command -Wno-documentation -Wno-license-management -Wno-parentheses-equality -Wno-reserved-identifier -I ../../../include -I ../../../include/generated -I ../../../soc/arm/actions/tai -I ../../../lib/crc -I ../../../drivers -I ../../../subsys/bluetooth -I ../../../subsys/settings/include -I ../../../subsys/trace -I ../../../../ext/hal/cmsis/CMSIS/Core/Include -I ../../../ext/crypto/tinycrypt/lib/include -I ../src/include -I ../src/profile -I ../src/main -I ../../../lib/libc/minimal/include -I ../src/include -I ../../../include/rbuf -imacros./linker_conf.h -nostdlib -Wno-section -imacros ../src/include/autoconf.h -ffreestanding -fno-common -g -mcpu=cortex-m4 -mthumb -mabi=aapcs -imacros ../../../include/toolchain/zephyr_stdint.h -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wno-main -Wno-pointer-sign -Wpointer-arith -Wno-address-of-packed-member -Werror=implicit-int -fno-asynchronous-unwind-tables -fno-pie -fno-pic -fno-strict-overflow -ffunction-sections -fdata-sections -funwind-tables -std=c99-IE:/app/keil/ARM/Cortex_DFP/1.1.0/Device/ARMCM4/Include-IE:/app/keil/ARM/Cortex_DFP/1.1.0/Device/ARM/ARMCM4/Include-D__UVISION_VERSION="540" -DARMCM4 -DKERNEL -D_FORTIFY_SOURCE="2" -D__PROGRAM_START -D__ZEPHYR__="1"-o ./build/ble_data_test_sample.o -MMD)
+F (..\src\actions\ble_data_test_sample.c)(0x69BBC590)(-xc -std=c99 --target=arm-arm-none-eabi -mcpu=cortex-m4 -mfpu=none -mfloat-abi=soft -c-fno-rtti -funsigned-char -fshort-enums -fshort-wchar-D__MICROLIB -mlittle-endian -gdwarf-4 -Oz -ffunction-sections -Wno-packed -Wno-missing-variable-declarations -Wno-missing-prototypes -Wno-missing-noreturn -Wno-sign-conversion -Wno-nonportable-include-path -Wno-reserved-id-macro -Wno-unused-macros -Wno-documentation-unknown-command -Wno-documentation -Wno-license-management -Wno-parentheses-equality -Wno-reserved-identifier -I ../../../include -I ../../../include/generated -I ../../../soc/arm/actions/tai -I ../../../lib/crc -I ../../../drivers -I ../../../subsys/bluetooth -I ../../../subsys/settings/include -I ../../../subsys/trace -I ../../../../ext/hal/cmsis/CMSIS/Core/Include -I ../../../ext/crypto/tinycrypt/lib/include -I ../src/include -I ../src/profile -I ../src/main -I ../../../lib/libc/minimal/include -I ../src/include -I ../../../include/rbuf -imacros./linker_conf.h -nostdlib -Wno-section -imacros ../src/include/autoconf.h -ffreestanding -fno-common -g -mcpu=cortex-m4 -mthumb -mabi=aapcs -imacros ../../../include/toolchain/zephyr_stdint.h -Wall -Wformat -Wformat-security -Wno-format-zero-length -Wno-main -Wno-pointer-sign -Wpointer-arith -Wno-address-of-packed-member -Werror=implicit-int -fno-asynchronous-unwind-tables -fno-pie -fno-pic -fno-strict-overflow -ffunction-sections -fdata-sections -funwind-tables -std=c99-IE:/app/keil/ARM/Cortex_DFP/1.1.0/Device/ARMCM4/Include-IE:/app/keil/ARM/Cortex_DFP/1.1.0/Device/ARM/ARMCM4/Include-D__UVISION_VERSION="540" -DARMCM4 -DKERNEL -D_FORTIFY_SOURCE="2" -D__PROGRAM_START -D__ZEPHYR__="1"-o ./build/ble_data_test_sample.o -MMD)
 I (linker_conf.h)(0x63744BE8)
 I (..\src\include\autoconf.h)(0x69088656)
 I (..\src\include\autoconf_app.h)(0x690865B2)
@@ -526,7 +528,7 @@ I (..\..\..\include\toolchain\common.h)(0x662DEF3C)
 I (..\..\..\lib\libc\minimal\include\stdbool.h)(0x619DFF24)
 I (..\..\..\lib\libc\minimal\include\inttypes.h)(0x619DFF24)
 I (..\..\..\lib\libc\minimal\include\stdint.h)(0x662DEF3C)
-I (..\src\include\ble_data_test_sample.h)(0x69B8CBA3)
+I (..\src\include\ble_data_test_sample.h)(0x69BBC589)
 I (..\..\..\include\zephyr.h)(0x619DFF24)
 I (..\..\..\include\kernel.h)(0x662DEF3B)
 I (..\..\..\include\kernel_includes.h)(0x662DEF3B)
@@ -601,7 +603,7 @@ I (..\..\..\include\bluetooth\addr.h)(0x619DFF24)
 I (..\..\..\include\bluetooth\crypto.h)(0x662DEF3B)
 I (..\..\..\include\bluetooth\hci_err.h)(0x619DFF24)
 I (..\src\include\ble_super_service.h)(0x69BA22F9)
-I (..\src\include\atb_ble_cgms.h)(0x69BA43C8)
+I (..\src\include\atb_ble_cgms.h)(0x69BBC4D1)
 I (..\..\..\include\bluetooth\gatt.h)(0x662DEF3B)
 I (..\..\..\lib\libc\minimal\include\sys\types.h)(0x662DEF3C)
 I (..\..\..\lib\libc\minimal\include\sys\_types.h)(0x619DFF24)

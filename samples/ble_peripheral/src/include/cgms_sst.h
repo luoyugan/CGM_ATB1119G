@@ -6,6 +6,7 @@
 
 #include <bluetooth/gatt.h>
 #include "atb_ble_cgms.h"
+int cgms_sst_set(nrf_ble_cgms_t *p_cgms, const ble_cgms_sst_t *p_sst);
 
 ssize_t cgms_read_feature(struct bt_conn *conn, const struct bt_gatt_attr *attr,
 	void *buf, uint16_t len, uint16_t offset);

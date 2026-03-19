@@ -149,34 +149,85 @@ typedef enum {
 	BLE_CGMS_EVT_START_SESSION,
 	BLE_CGMS_EVT_STOP_SESSION,
 	BLE_CGMS_EVT_WRITE_COMM_INTERVAL,
-} ble_cgms_evt_type_t;
+} nrf_ble_cgms_evt_type_t;
+
+typedef nrf_ble_cgms_evt_type_t ble_cgms_evt_type_t;
+
+/**
+ * @defgroup nrf_ble_cgms_structs Structures
+ * @{
+ */
+
+/**@brief CGM Service event. */
+typedef struct
+{
+    nrf_ble_cgms_evt_type_t evt_type; /**< Type of event. */
+} nrf_ble_cgms_evt_t;
 
 typedef struct {
-	ble_cgms_evt_type_t evt_type;
-	uint8_t comm_interval;
+    ble_cgms_evt_type_t evt_type;
+    uint8_t comm_interval;
 } ble_cgms_evt_t;
 
-typedef void (*ble_cgms_evt_handler_t)(const ble_cgms_evt_t *evt);
+/** @} */ // End tag for Structure group.
 
-// 后续需要改一下格式
-struct cgms_sensor_annunciation {
-	uint8_t warning;
-	uint8_t calib_temp;
-	uint8_t status;
-};
+/**
+ * @defgroup nrf_ble_cgms_types Types
+ * @{
+ */
+
+/**@brief Forward declaration of the nrf_ble_cgms_t type. */
+typedef struct ble_cgms_s nrf_ble_cgms_t;
+
+/**@brief CGM Service event handler type. */
+typedef void (*ble_cgms_evt_handler_t)(nrf_ble_cgms_t * p_cgms, nrf_ble_cgms_evt_t * p_evt);
+
+/**
+ * @addtogroup nrf_ble_cgms_structs
+ * @{
+ */
+
+/**@brief CGM Measurement Sensor Status Annunciation. */
+typedef struct
+{
+    uint8_t warning;               /**< Warning annunciation. */
+    uint8_t calib_temp;            /**< Calibration and Temperature annunciation. */
+    uint8_t status;                /**< Status annunciation. */
+} nrf_ble_cgms_sensor_annunc_t;
+
+/**@brief CGM measurement. */
+typedef struct
+{
+    uint8_t                      flags;                      /**< Indicates the presence of optional fields and the Sensor Status Annunciation field. */
+    uint16_t                     glucose_concentration;      /**< Glucose concentration. 16-bit word comprising 4-bit exponent and signed 12-bit mantissa. */
+    uint16_t                     time_offset;                /**< Time offset. Represents the time difference between measurements. */
+    nrf_ble_cgms_sensor_annunc_t sensor_status_annunciation; /**< Sensor Status Annunciation. Variable length, can include Status, Cal/Temp, and Warning. */
+    uint16_t                     trend;                      /**< Optional field that can include Trend Information. */
+    uint16_t                     quality;                    /**< Optional field that includes the Quality of the measurement. */
+} nrf_ble_cgms_meas_t;
+
+/**@brief CGM Measurement record. */
+typedef struct
+{
+    nrf_ble_cgms_meas_t meas; /**< CGM measurement. */
+} ble_cgms_rec_t;
 
 struct cgms_measurement {
-	uint8_t flags;
-	uint16_t glucose_concentration;
-	uint16_t time_offset;
-	struct cgms_sensor_annunciation sensor_status_annunciation;
-	uint16_t trend;
-	uint16_t quality;
+    uint8_t flags;
+    uint16_t glucose_concentration;
+    uint16_t time_offset;
+    nrf_ble_cgms_sensor_annunc_t sensor_status_annunciation;
+    uint16_t trend;
+    uint16_t quality;
 };
 
-struct cgms_record {
-	struct cgms_measurement meas;
-};
+/**@brief Features supported by the CGM Service. */
+typedef struct
+{
+    uint32_t feature;         /**< Information on supported features in the CGM Service. */
+    uint8_t  type;            /**< Type. */
+    uint8_t  sample_location; /**< Sample location. */
+}nrf_ble_cgms_feature_t;
 
 struct cgms_feature_value {
 	uint32_t feature;
@@ -184,10 +235,18 @@ struct cgms_feature_value {
 	uint8_t sample_location;
 };
 
+/**@brief Status of the CGM measurement. */
+// typedef struct
+// {
+//     uint16_t                     time_offset; /**< Time offset. */
+//     nrf_ble_cgms_sensor_annunc_t status;      /**< Status. */
+// } nrf_ble_cgm_status_t;
+
 struct cgms_status {
 	uint16_t time_offset;
-	struct cgms_sensor_annunciation annunciation;
+	nrf_ble_cgms_sensor_annunc_t annunciation;
 };
+
 
 typedef struct {
 	uint16_t year;
@@ -199,10 +258,20 @@ typedef struct {
 } ble_date_time_t;
 
 typedef struct {
-	ble_date_time_t date_time;
-	uint8_t time_zone;
-	uint8_t dst;
+    ble_date_time_t date_time;
+    uint8_t time_zone;
+    uint8_t dst;
 } ble_cgms_sst_t;
+
+typedef struct
+{
+    ble_cgms_evt_handler_t    evt_handler;           /**< Event handler to be called for handling events in the CGM Service. */
+    // ble_srv_error_handler_t   error_handler;         /**< Function to be called when an error occurs. */
+    // nrf_ble_gq_t            * p_gatt_queue;          /**< Pointer to BLE GATT Queue instance. */
+    nrf_ble_cgms_feature_t    feature;               /**< Features supported by the service. */
+    struct cgms_status      initial_sensor_status; /**< Sensor status. */
+    uint16_t                  initial_run_time;      /**< Run time. */
+} nrf_ble_cgms_init_t;
 
 typedef struct
 {
@@ -213,6 +282,33 @@ typedef struct
 	uint8_t size_val;
 } ble_socp_rsp_t;
 
+/**@brief Calibration value. */
+typedef struct
+{
+    uint8_t value[NRF_BLE_CGMS_MAX_CALIB_LEN]; /**< Array containing the calibration value. */
+} nrf_ble_cgms_calib_t;
+
+typedef struct {
+	uint8_t opcode;
+	uint8_t operator;
+	uint8_t operand_len;
+	uint8_t *p_operand;
+} ble_racp_value_t;
+
+/**@brief Record Access Control Point transaction data. */
+typedef struct
+{
+    uint8_t          racp_proc_operator;                                                    /**< Operator of the current request. */
+    uint16_t         racp_proc_record_ndx;                                                  /**< Current record index. */
+    uint16_t         racp_proc_records_ndx_last_to_send;                                    /**< The last record to send, can be used together with racp_proc_record_ndx to determine a range of records to send. (used by greater/less filters). */
+    uint16_t         racp_proc_records_reported;                                            /**< Number of reported records. */
+    ble_racp_value_t racp_request;                                                      /**< Compatibility placeholder. */
+    ble_racp_value_t pending_racp_response;                                                /**< Compatibility placeholder. */
+    bool             racp_procesing_active;                                                 /**< RACP processing active. */
+    uint8_t          pending_racp_response_operand[NRF_BLE_CGMS_RACP_PENDING_OPERANDS_MAX]; /**< Operand of the RACP response to be sent. */
+} nrf_ble_cgms_racp_t;
+
+
 struct cgms_racp_state {
 	bool processing_active;
 	uint8_t proc_operator;
@@ -222,12 +318,33 @@ struct cgms_racp_state {
 };
 
 struct cgms_alert_levels {
-	uint16_t patient_high;
-	uint16_t patient_low;
-	uint16_t hypo;
-	uint16_t hyper;
-	uint16_t rate_decrease;
-	uint16_t rate_increase;
+    uint16_t patient_high;
+    uint16_t patient_low;
+    uint16_t hypo;
+    uint16_t hyper;
+    uint16_t rate_decrease;
+    uint16_t rate_increase;
+};
+
+/**@brief Status information for the CGM Service. */
+struct ble_cgms_s
+{
+    ble_cgms_evt_handler_t      evt_handler;                                 /**< Event handler to be called for handling events in the CGM Service. */
+    // ble_srv_error_handler_t     error_handler;                               /**< Function to be called if an error occurs. */
+    // nrf_ble_gq_t              * p_gatt_queue;                                /**< Pointer to BLE GATT Queue instance. */
+    // nrf_ble_gq_req_error_cb_t   gatt_err_handler;                            /**< Error handler to be called in case of an error from SoftDevice. */
+    uint16_t                    service_handle;                              /**< Handle of the CGM Service (as provided by the BLE stack). */
+    // nrf_ble_cgms_char_handler_t char_handles;                                /**< GATTS characteristic handles for the different characteristics in the service. */
+    uint16_t                    conn_handle;                                 /**< Handle of the current connection (as provided by the BLE stack; @ref BLE_CONN_HANDLE_INVALID if not in a connection). */
+    nrf_ble_cgms_feature_t      feature;                                     /**< Structure to store the value of the feature characteristic. */
+    uint8_t                     comm_interval;                               /**< Variable to keep track of the communication interval. */
+    ble_socp_rsp_t              socp_response;                               /**< Structure containing reponse data to be indicated to the peer device. */
+    nrf_ble_cgms_calib_t        calibration_val[NRF_BLE_CGMS_CALIBS_NB_MAX]; /**< Calibration value. Can be read from and written to SOCP. */
+    bool                        is_session_started;                          /**< Indicator if we are currently in a session. */
+    uint8_t                     nb_run_session;                              /**< Variable to keep track of the number of sessions that were run. */
+    uint16_t                    session_run_time;                            /**< Variable to store the expected run time of a session. */
+    struct cgms_status          sensor_status;                               /**< Structure to keep track of the sensor status. */
+    nrf_ble_cgms_racp_t         racp_data;                                   /**< Structure to manage Record Access requests. */
 };
 
 enum {
@@ -256,7 +373,7 @@ extern const struct bt_gatt_attr attr_cgms_svc[];
 extern struct bt_conn *m_conn;
 extern ble_cgms_evt_handler_t m_evt_handler;
 extern struct k_delayed_work m_glucose_work;
-extern struct cgms_record m_records[];
+// extern struct cgms_record m_records[];
 extern uint16_t m_record_count;
 extern struct cgms_feature_value m_feature;
 extern struct cgms_status m_status;
@@ -280,12 +397,14 @@ extern uint8_t m_calibration_value[CGMS_CALIBRATION_VALUE_LEN];
 
 void cgms_emit_event(ble_cgms_evt_type_t evt_type);
 
-void ble_cgms_init(void);
+uint32_t ble_cgms_init(nrf_ble_cgms_t * p_cgms, const nrf_ble_cgms_init_t * p_cgms_init);
 void ble_cgms_register_evt_handler(ble_cgms_evt_handler_t handler);
 void ble_cgms_connected(struct bt_conn *conn);
 void ble_cgms_disconnected(struct bt_conn *conn);
 void ble_cgms_increase_glucose(void);
 void ble_cgms_decrease_glucose(void);
+uint16_t uint16_decode(const uint8_t * p_encoded_data);
+uint8_t uint16_encode(uint16_t value, uint8_t * p_encoded_data);
 
 #ifdef __cplusplus
 }

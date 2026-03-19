@@ -42,14 +42,8 @@
 #define RACP_RESPONSE_PROCEDURE_NOT_DONE            0x08
 #define RACP_RESPONSE_OPERAND_UNSUPPORTED           0x09
 
-typedef struct {
-	uint8_t opcode;
-	uint8_t operator;
-	uint8_t operand_len;
-	uint8_t *p_operand;
-} ble_racp_value_t;
-
 void cgms_racp_ccc_cfg_changed(const struct bt_gatt_attr *attr, uint16_t value);
+void cgms_racp_on_meas_tx_complete(struct bt_conn *conn, void *user_data);
 ssize_t cgms_write_racp(struct bt_conn *conn, const struct bt_gatt_attr *attr,
 	const void *buf, uint16_t len, uint16_t offset, uint8_t flags);
 

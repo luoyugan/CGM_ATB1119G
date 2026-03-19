@@ -31,8 +31,10 @@
 	
 static struct bt_conn *slave_conn;
 
-static void ble_cgms_evt_handle(const ble_cgms_evt_t *evt)
+static void ble_cgms_evt_handle(nrf_ble_cgms_t * p_cgms, nrf_ble_cgms_evt_t *evt)
 {
+	ARG_UNUSED(p_cgms);
+
 	if (evt == NULL) {
 		return;
 	}
@@ -51,7 +53,7 @@ static void ble_cgms_evt_handle(const ble_cgms_evt_t *evt)
 		printk("CGMS stop session\n");
 		break;
 	case BLE_CGMS_EVT_WRITE_COMM_INTERVAL:
-		printk("CGMS comm interval -> %u min\n", evt->comm_interval);
+		printk("CGMS comm interval -> %u min\n", m_comm_interval);
 		break;
 	default:
 		break;
@@ -253,10 +255,17 @@ static struct bt_conn_cb conn_callbacks = {
 
 void bt_le_op_init(void)
 {
+	uint32_t err_code;
+	nrf_ble_cgms_init_t cgms_init;
+
 	/* register conn callbacks into bt stack */
 	bt_conn_cb_register((struct bt_conn_cb *)&conn_callbacks);
 	
-	bt_data_trans_init();
+	memset(&cgms_init, 0, sizeof(cgms_init));
+
+	// err_code = nrf_ble_cgms_init(&m_cgms, &cgms_init);
+
+
 	ble_cgms_register_evt_handler(ble_cgms_evt_handle);
 	
 	start_adv();

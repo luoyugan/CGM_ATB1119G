@@ -9,11 +9,6 @@ void update_write_stats(uint16_t len)
 	printk("cgms write rx: %u byte\n", len);
 }
 
-void bt_data_trans_init(void)
-{
-	ble_cgms_init();
-}
-
 void bt_data_submit_handle(struct bt_conn *conn, uint16_t index)
 {
 	ARG_UNUSED(conn);

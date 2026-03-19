@@ -65,8 +65,9 @@
   ..\..\..\lib\libc\minimal\include\sys\_types.h \
   ..\..\..\include\bluetooth\uuid.h ..\..\..\include\bluetooth\att.h \
   ..\src\actions\cgms_db.c ..\src\include\cgms_db.h \
-  ..\src\actions\cgms_sst.c ..\src\include\cgms_sst.h \
-  ..\src\actions\cgms_meas.c ..\src\include\cgms_meas.h \
-  ..\src\actions\cgms_racp.c ..\src\include\cgms_racp.h \
-  ..\src\actions\cgms_socp.c ..\src\include\cgms_socp.h \
-  ..\src\actions\atb_ble_cgms.c
+  ..\src\actions\cgms_sst.c ..\..\..\lib\libc\minimal\include\time.h \
+  ..\..\..\lib\libc\minimal\include\sys\_timespec.h \
+  ..\src\include\cgms_sst.h ..\src\actions\cgms_meas.c \
+  ..\src\include\cgms_meas.h ..\src\actions\cgms_racp.c \
+  ..\src\include\cgms_racp.h ..\src\actions\cgms_socp.c \
+  ..\src\include\cgms_socp.h ..\src\actions\atb_ble_cgms.c

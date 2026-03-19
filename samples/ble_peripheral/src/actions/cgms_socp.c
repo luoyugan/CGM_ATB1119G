@@ -1,9 +1,11 @@
 #include <errno.h>
 #include <string.h>
 
+#include "atb_ble_cgms.h"
 #include "cgms_socp.h"
 #include "cgms_db.h"
 #include "cgms_meas.h"
+#include "cgms_sst.h"
 
 void cgms_socp_ccc_cfg_changed(const struct bt_gatt_attr *attr, uint16_t value)
 {
@@ -251,6 +253,10 @@ ssize_t cgms_write_socp(struct bt_conn *conn, const struct bt_gatt_attr *attr,
 			break;
 		}
 		if ((m_nb_run_session != 0U) && !cgms_feature_present(NRF_BLE_CGMS_FEAT_MULTIPLE_SESSIONS_SUPPORTED)) {
+			(void)cgms_socp_send_response(SOCP_RESPONSE_CODE, req.opcode, SOCP_RSP_PROCEDURE_NOT_COMPLETED, NULL, 0U);
+			break;
+		}
+		if (cgms_sst_set(NULL, &m_sst) != 0) {
 			(void)cgms_socp_send_response(SOCP_RESPONSE_CODE, req.opcode, SOCP_RSP_PROCEDURE_NOT_COMPLETED, NULL, 0U);
 			break;
 		}
