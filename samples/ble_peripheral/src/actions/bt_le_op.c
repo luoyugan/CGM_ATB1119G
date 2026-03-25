@@ -24,17 +24,18 @@
 #include "soc_clock.h"
 #include "soc_pm.h"
 #include "atb_ble_cgms.h"
+#include "cgms_meas.h"
+#include "atb_ble_std_services.h"
 
 #define DEVICE_NAME "CGMS_Demo"
 //#define DEVICE_NAME			CONFIG_BT_DEVICE_NAME
 #define DEVICE_NAME_LEN		(sizeof(DEVICE_NAME) - 1)
+NRF_BLE_CGMS_DEF(m_cgms);   
 	
 static struct bt_conn *slave_conn;
 
 static void ble_cgms_evt_handle(nrf_ble_cgms_t * p_cgms, nrf_ble_cgms_evt_t *evt)
 {
-	ARG_UNUSED(p_cgms);
-
 	if (evt == NULL) {
 		return;
 	}
@@ -48,12 +49,20 @@ static void ble_cgms_evt_handle(nrf_ble_cgms_t * p_cgms, nrf_ble_cgms_evt_t *evt
 		break;
 	case BLE_CGMS_EVT_START_SESSION:
 		printk("CGMS start session\n");
+		if (p_cgms != NULL) {
+			cgms_start_session(p_cgms);
+		}
 		break;
 	case BLE_CGMS_EVT_STOP_SESSION:
 		printk("CGMS stop session\n");
+		if (p_cgms != NULL) {
+			cgms_stop_session(p_cgms);
+		}
 		break;
 	case BLE_CGMS_EVT_WRITE_COMM_INTERVAL:
-		printk("CGMS comm interval -> %u min\n", m_comm_interval);
+		if (p_cgms != NULL) {
+			printk("CGMS comm interval -> %u min\n", p_cgms->comm_interval);
+		}
 		break;
 	default:
 		break;
@@ -140,7 +149,10 @@ static int start_adv(void)
 	struct bt_data ad[] = {
 		BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
 		BT_DATA_BYTES(BT_DATA_NAME_COMPLETE, DEVICE_NAME),
-		BT_DATA_BYTES(BT_DATA_UUID16_ALL, BT_UUID_16_ENCODE(BT_UUID_CGM_VAL)),
+		BT_DATA_BYTES(BT_DATA_UUID16_ALL,
+			BT_UUID_16_ENCODE(BT_UUID_CGM_VAL),
+			BT_UUID_16_ENCODE(BT_UUID_DIS_VAL),
+			BT_UUID_16_ENCODE(BT_UUID_BAS_VAL)),
 	};
 
 //	err = bt_le_adv_start(BT_LE_ADV_CONN, ad, ARRAY_SIZE(ad), NULL, 0);
@@ -220,7 +232,7 @@ void disconnected(struct bt_conn *conn, uint8_t reason)
 
 	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
 	printk("Disconnected: %s (reason 0x%02x)\n", addr, reason);
-	ble_cgms_disconnected(conn);
+	ble_cgms_disconnected(&m_cgms, conn);
 	bt_conn_unref(conn);
 	slave_conn = NULL;
 	
@@ -255,6 +267,7 @@ static struct bt_conn_cb conn_callbacks = {
 
 void bt_le_op_init(void)
 {
+
 	uint32_t err_code;
 	nrf_ble_cgms_init_t cgms_init;
 
@@ -263,7 +276,11 @@ void bt_le_op_init(void)
 	
 	memset(&cgms_init, 0, sizeof(cgms_init));
 
-	// err_code = nrf_ble_cgms_init(&m_cgms, &cgms_init);
+	err_code = ble_cgms_init(&m_cgms, &cgms_init);
+	if (err_code != 0U) {
+		printk("ble_cgms_init failed (err %u)\n", err_code);
+	}
+	atb_std_services_init();
 
 
 	ble_cgms_register_evt_handler(ble_cgms_evt_handle);

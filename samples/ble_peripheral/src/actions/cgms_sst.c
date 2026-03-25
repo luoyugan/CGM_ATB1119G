@@ -106,7 +106,7 @@ static uint8_t sst_encode(const ble_cgms_sst_t *p_sst, uint8_t *p_encoded_sst)
 
 
 // 基于本地时间计算 SST
-static int cgm_update_sst(const uint8_t *p_data, uint16_t len)
+static int cgm_update_sst(nrf_ble_cgms_t *p_cgms, const uint8_t *p_data, uint16_t len)
 {
     ble_cgms_sst_t sst;
     struct tm c_time_and_date;
@@ -116,7 +116,7 @@ static int cgm_update_sst(const uint8_t *p_data, uint16_t len)
 
     sst_decode(&sst, p_data, len);
     convert_ble_time_c_time(&sst, &c_time_and_date);
-    calc_sst(m_status.time_offset, &c_time_and_date);
+    calc_sst(p_cgms->sensor_status.time_offset, &c_time_and_date);
     convert_c_time_ble_time(&sst, &c_time_and_date);
 
     return cgms_sst_set(NULL, &sst);
@@ -138,6 +138,7 @@ int cgms_sst_set(nrf_ble_cgms_t *p_cgms, const ble_cgms_sst_t *p_sst)
         return -EINVAL;
     }
 
+    // 使用全局变量存储SST值，后续可以改为存储在CGMS实例中，目前没有接口，需要问一下厂商    
     m_sst = *p_sst;
     return 0;
 }
@@ -174,8 +175,13 @@ ssize_t cgms_read_srt(struct bt_conn *conn, const struct bt_gatt_attr *attr,
     void *buf, uint16_t len, uint16_t offset)
 {
     uint8_t value[2];
+    nrf_ble_cgms_t * p_cgms = ble_cgms_instance_get();
 
-    put_le16(value, m_session_run_time);
+    if (p_cgms == NULL) {
+        return BT_GATT_ERR(BT_ATT_ERR_UNLIKELY);
+    }
+
+    put_le16(value, p_cgms->session_run_time);
     return bt_gatt_attr_read(conn, attr, buf, len, offset, value, sizeof(value));
 }
 #endif
@@ -183,6 +189,8 @@ ssize_t cgms_read_srt(struct bt_conn *conn, const struct bt_gatt_attr *attr,
 ssize_t cgms_write_sst(struct bt_conn *conn, const struct bt_gatt_attr *attr,
     const void *buf, uint16_t len, uint16_t offset, uint8_t flags)
 {
+    nrf_ble_cgms_t * p_cgms = ble_cgms_instance_get();
+
     ARG_UNUSED(conn);
     ARG_UNUSED(attr);
     ARG_UNUSED(flags);
@@ -193,10 +201,10 @@ ssize_t cgms_write_sst(struct bt_conn *conn, const struct bt_gatt_attr *attr,
     if (len != NRF_BLE_CGMS_SST_LEN) {
         return BT_GATT_ERR(BT_ATT_ERR_INVALID_ATTRIBUTE_LEN);
     }
-    if (m_session_started) {
+    if ((p_cgms == NULL) || p_cgms->is_session_started) {
         return BT_GATT_ERR(BT_ATT_ERR_WRITE_NOT_PERMITTED);
     }
-    if (cgm_update_sst((const uint8_t *)buf, len) != 0) {
+    if (cgm_update_sst(p_cgms, (const uint8_t *)buf, len) != 0) {
         return BT_GATT_ERR(BT_ATT_ERR_UNLIKELY);
     }
 

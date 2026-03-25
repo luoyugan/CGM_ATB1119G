@@ -1,36 +1,35 @@
-./build/bt_le_op.o: ..\src\actions\bt_le_op.c linker_conf.h \
-  ..\src\include\autoconf.h ..\src\include\autoconf_app.h \
+./build/atb_ble_std_services.o: ..\src\actions\atb_ble_std_services.c \
+  linker_conf.h ..\src\include\autoconf.h ..\src\include\autoconf_app.h \
   ..\src\include\atb1113_46k.h \
   ..\..\..\include\toolchain\zephyr_stdint.h \
-  ..\..\..\include\zephyr\types.h \
-  ..\..\..\lib\libc\minimal\include\stdint.h \
-  ..\..\..\lib\libc\minimal\include\string.h \
-  ..\..\..\lib\libc\minimal\include\bits\restrict.h \
   ..\..\..\lib\libc\minimal\include\errno.h \
   ..\..\..\include\sys\errno_private.h ..\..\..\include\toolchain.h \
   ..\..\..\include\toolchain\gcc.h ..\..\..\include\toolchain\common.h \
   ..\..\..\lib\libc\minimal\include\stdbool.h \
   ..\..\..\include\generated\syscalls\errno_private.h \
-  ..\..\..\include\generated\syscall_list.h ..\..\..\include\syscall.h \
+  ..\..\..\include\generated\syscall_list.h \
+  ..\..\..\lib\libc\minimal\include\stdint.h ..\..\..\include\syscall.h \
   ..\..\..\include\arch\syscall.h \
   ..\..\..\include\arch\arm\aarch32\syscall.h \
-  ..\..\..\include\sys\printk.h \
-  ..\..\..\lib\libc\minimal\include\inttypes.h \
-  ..\..\..\include\sys\byteorder.h ..\..\..\include\sys\__assert.h \
+  ..\..\..\include\zephyr\types.h \
+  ..\..\..\lib\libc\minimal\include\string.h \
+  ..\..\..\lib\libc\minimal\include\bits\restrict.h \
   ..\..\..\include\zephyr.h ..\..\..\include\kernel.h \
   ..\..\..\include\kernel_includes.h \
   ..\..\..\lib\libc\minimal\include\limits.h \
   ..\..\..\include\linker\sections.h \
   ..\..\..\include\linker\section_tags.h ..\..\..\include\sys\atomic.h \
-  ..\..\..\include\sched_priq.h ..\..\..\include\sys\util.h \
-  ..\..\..\include\sys\util_macro.h ..\..\..\include\sys\util_internal.h \
-  ..\..\..\include\sys\dlist.h ..\..\..\include\sys\rb.h \
-  ..\..\..\include\sys\slist.h ..\..\..\include\sys\list_gen.h \
-  ..\..\..\include\sys\sflist.h ..\..\..\include\kernel_structs.h \
-  ..\..\..\include\sys\sys_heap.h ..\..\..\include\mempool_heap.h \
-  ..\..\..\include\kernel_version.h ..\..\..\include\arch\cpu.h \
-  ..\..\..\include\sys\arch_interface.h ..\..\..\include\irq_offload.h \
-  ..\..\..\include\arch\arch_inlines.h \
+  ..\..\..\include\sys\__assert.h ..\..\..\include\sched_priq.h \
+  ..\..\..\include\sys\util.h ..\..\..\include\sys\util_macro.h \
+  ..\..\..\include\sys\util_internal.h ..\..\..\include\sys\dlist.h \
+  ..\..\..\include\sys\rb.h ..\..\..\include\sys\slist.h \
+  ..\..\..\include\sys\list_gen.h ..\..\..\include\sys\sflist.h \
+  ..\..\..\include\kernel_structs.h ..\..\..\include\sys\sys_heap.h \
+  ..\..\..\include\mempool_heap.h ..\..\..\include\kernel_version.h \
+  ..\..\..\include\sys\printk.h \
+  ..\..\..\lib\libc\minimal\include\inttypes.h \
+  ..\..\..\include\arch\cpu.h ..\..\..\include\sys\arch_interface.h \
+  ..\..\..\include\irq_offload.h ..\..\..\include\arch\arch_inlines.h \
   ..\..\..\include\arch\arm\aarch32\arch.h \
   ..\..\..\include\arch\arm\aarch32\thread.h \
   ..\..\..\include\arch\arm\aarch32\exc.h \
@@ -57,21 +56,12 @@
   ..\..\..\include\generated\syscalls\kobject.h \
   ..\..\..\include\tracing\tracing.h \
   ..\..\..\include\generated\syscalls\kernel.h \
-  ..\..\..\include\bluetooth\bluetooth.h ..\..\..\include\net\buf.h \
-  ..\..\..\include\bluetooth\gap.h ..\..\..\include\bluetooth\addr.h \
-  ..\..\..\include\bluetooth\crypto.h ..\..\..\include\bluetooth\hci.h \
-  ..\..\..\include\bluetooth\hci_err.h ..\..\..\include\bluetooth\conn.h \
-  ..\..\..\include\bluetooth\uuid.h ..\..\..\include\bluetooth\gatt.h \
+  ..\..\..\include\bluetooth\gatt.h \
   ..\..\..\lib\libc\minimal\include\sys\types.h \
   ..\..\..\lib\libc\minimal\include\sys\_types.h \
-  ..\..\..\include\bluetooth\att.h ..\src\include\bt_le_op.h \
-  ..\src\include\msg_manager.h ..\..\..\include\device.h \
-  ..\..\..\include\init.h ..\..\..\include\sys\device_mmio.h \
-  ..\..\..\include\sys\mem_manage.h \
-  ..\..\..\include\generated\syscalls\device.h \
-  ..\..\..\include\drivers\input\input_dev.h \
-  ..\src\include\ble_data_test_sample.h \
-  ..\src\include\ble_super_service.h ..\src\include\atb_ble_cgms.h \
-  ..\..\..\soc\arm\actions\tai\soc_clock.h \
-  ..\..\..\soc\arm\actions\tai\soc_pm.h ..\src\include\cgms_meas.h \
-  ..\src\include\atb_ble_std_services.h
+  ..\..\..\include\bluetooth\conn.h \
+  ..\..\..\include\bluetooth\bluetooth.h ..\..\..\include\net\buf.h \
+  ..\..\..\include\bluetooth\gap.h ..\..\..\include\bluetooth\addr.h \
+  ..\..\..\include\bluetooth\crypto.h \
+  ..\..\..\include\bluetooth\hci_err.h ..\..\..\include\bluetooth\uuid.h \
+  ..\..\..\include\bluetooth\att.h ..\src\include\atb_ble_std_services.h

@@ -7,6 +7,25 @@
 #include "cgms_meas.h"
 #include "cgms_sst.h"
 
+static bool m_socp_ind_inflight;
+
+static void ble_socp_decode(uint8_t data_len, uint8_t const * p_data, ble_cgms_socp_value_t * p_socp_val)
+{
+    p_socp_val->opcode      = 0xFF;
+    p_socp_val->operand_len = 0;
+    p_socp_val->p_operand   = NULL;
+
+    if (data_len > 0)
+    {
+        p_socp_val->opcode = p_data[0];
+    }
+    if (data_len > 1)
+    {
+        p_socp_val->operand_len = data_len - 1;
+        p_socp_val->p_operand   = (uint8_t*)&p_data[1]; // lint !e416
+    }
+}
+
 void cgms_socp_ccc_cfg_changed(const struct bt_gatt_attr *attr, uint16_t value)
 {
 	ARG_UNUSED(attr);
@@ -48,117 +67,154 @@ static void cgms_socp_ind_cb(struct bt_conn *conn, struct bt_gatt_indicate_param
 {
 	ARG_UNUSED(conn);
 	ARG_UNUSED(params);
-	ARG_UNUSED(err);
+	m_socp_ind_inflight = false;
+	if (err != 0U) {
+		printk("SOCP indication complete with err: %u\n", err);
+	}
 }
 
-static int cgms_socp_indicate(const uint8_t *data, uint16_t len)
+static int cgms_socp_indicate(nrf_ble_cgms_t * p_cgms, const uint8_t *data, uint16_t len)
 {
-	if ((m_conn == NULL) || !m_socp_ind_enabled) {
+	if ((p_cgms == NULL) || (p_cgms->m_conn == NULL) || !m_socp_ind_enabled) {
 		return -ENOTCONN;
 	}
 
-	memcpy(m_socp_ind_buf, data, len);
-	memset(&m_socp_ind_params, 0, sizeof(m_socp_ind_params));
-	m_socp_ind_params.attr = &attr_cgms_svc[CGMS_ATTR_SOCP_VAL];
-	m_socp_ind_params.data = m_socp_ind_buf;
-	m_socp_ind_params.len = len;
-	m_socp_ind_params.func = cgms_socp_ind_cb;
-	return bt_gatt_indicate(m_conn, &m_socp_ind_params);
-}
-
-static void cgms_socp_decode(const uint8_t *buf, uint16_t len, ble_cgms_socp_value_t *req)
-{
-	req->opcode = 0xFFU;
-	req->operand_len = 0U;
-	req->p_operand = NULL;
-
-	if (len > 0U) {
-		req->opcode = buf[0];
-	}
-	if (len > 1U) {
-		req->operand_len = len - 1U;
-		req->p_operand = (uint8_t *)&buf[1];
-	}
-}
-
-static uint8_t ble_socp_encode(uint8_t *buf, uint16_t buf_len, const ble_socp_rsp_t *rsp)
-{
-	uint16_t total_len = 1U;
-	uint8_t len = 0U;
-	bool with_result_code;
-
-	if ((buf == NULL) || (rsp == NULL)) {
-		return 0U;
+	if (m_socp_ind_inflight) {
+		return -EBUSY;
 	}
 
-	if (rsp->size_val > sizeof(rsp->resp_val)) {
-		return 0U;
-	}
-
-	with_result_code = cgms_socp_response_has_result_code(rsp->opcode);
-	if (with_result_code) {
-		total_len += 2U;
-	}
-	total_len += rsp->size_val;
-
-	if (total_len > buf_len) {
-		return 0U;
-	}
-
-	buf[len++] = rsp->opcode;
-	if (with_result_code) {
-		buf[len++] = rsp->req_opcode;
-		buf[len++] = rsp->rsp_code;
-	}
-	if (rsp->size_val > 0U) {
-		memcpy(&buf[len], rsp->resp_val, rsp->size_val);
-		len += rsp->size_val;
-	}
-
-	return len;
-}
-
-static int cgms_socp_send_response(uint8_t opcode, uint8_t req_opcode, uint8_t rsp_code,
-	const uint8_t *value, uint8_t value_len)
-{
-	uint8_t buf[20];
-	uint8_t len;
-	ble_socp_rsp_t rsp;
-
-	if (value_len > sizeof(rsp.resp_val)) {
+	if ((data == NULL) || (len == 0U) || (len > sizeof(m_socp_ind_buf))) {
 		return -EINVAL;
 	}
-
-	memset(&rsp, 0, sizeof(rsp));
-	rsp.opcode = opcode;
-	rsp.req_opcode = req_opcode;
-	rsp.rsp_code = rsp_code;
-	rsp.size_val = value_len;
-	if ((value != NULL) && (value_len > 0U)) {
-		memcpy(rsp.resp_val, value, value_len);
+	
+	memset(&m_socp_ind_params, 0, sizeof(m_socp_ind_params));
+	m_socp_ind_params.attr = &attr_cgms_svc[CGMS_ATTR_SOCP_VAL];
+	m_socp_ind_params.data = data;
+	m_socp_ind_params.len = len;
+	m_socp_ind_params.func = cgms_socp_ind_cb;
+	m_socp_ind_params.destroy = NULL;
+	m_socp_ind_params.uuid = NULL;
+	printk("Sending SOCP indication, len: %u\n", len);
+	printk("Connection: %p\n", (void *)p_cgms->m_conn);
+	int err = bt_gatt_indicate(p_cgms->m_conn, &m_socp_ind_params);
+	if (err == 0) {
+		m_socp_ind_inflight = true;
 	}
+	return err;
+}
 
-	len = ble_socp_encode(buf, sizeof(buf), &rsp);
+static int cgms_socp_send_response_code(nrf_ble_cgms_t * p_cgms, uint8_t req_opcode, uint8_t rsp_code)
+{
+	m_socp_ind_buf[0] = SOCP_RESPONSE_CODE;
+	m_socp_ind_buf[1] = req_opcode;
+	m_socp_ind_buf[2] = rsp_code;
+	return cgms_socp_indicate(p_cgms, m_socp_ind_buf, 3U);
+}
+
+int cgms_transport_indicate_socp(uint8_t *data, uint16_t len, bt_gatt_indicate_func_t cb)
+{
+    const struct bt_gatt_attr *attr = &attr_cgms_svc[17];
+	nrf_ble_cgms_t * p_cgms = ble_cgms_instance_get();
+	if (p_cgms == NULL) {
+		return BT_GATT_ERR(BT_ATT_ERR_UNLIKELY);
+	}
+    struct bt_conn *conn = p_cgms->m_conn;
+    printk("Indicating SOCP response, conn %p, attr %p, data %p, len %u", conn, attr, data, len);
+
+    if ((conn == NULL) || (attr == NULL) || (data == NULL) || (len == 0)) {
+        return -EINVAL;
+    }
+
+    socp_ind_params.attr = attr;
+    socp_ind_params.data = data;
+    socp_ind_params.len = len;
+    socp_ind_params.func = cb;
+    socp_ind_params.destroy = NULL;
+    socp_ind_params.uuid = NULL;
+
+    return bt_gatt_indicate(conn, &socp_ind_params);
+}
+
+static int cgms_socp_send_u16_response(uint8_t req_opcode, uint8_t rsp_code)
+{
+	m_socp_ind_buf[0] = SOCP_RESPONSE_CODE;
+	m_socp_ind_buf[1] = req_opcode;
+	m_socp_ind_buf[2] = rsp_code;
+	return cgms_socp_indicate(m_socp_ind_buf, 3, cgms_socp_ind_cb);
+}
+static uint8_t ble_socp_encode(const ble_socp_rsp_t * p_socp_rsp, uint8_t * p_data)
+{
+    uint8_t len = 0;
+    int     i;
+
+
+    if (p_data != NULL)
+    {
+        p_data[len++] = p_socp_rsp->opcode;
+
+        if (
+			(p_socp_rsp->opcode != SOCP_READ_CGM_COMM_INTERVAL_RSP)
+            && (p_socp_rsp->opcode != SOCP_READ_PATIENT_HIGH_ALERT_LEVEL_RESPONSE)
+            && (p_socp_rsp->opcode != SOCP_READ_PATIENT_LOW_ALERT_LEVEL_RESPONSE)
+            && (p_socp_rsp->opcode != SOCP_HYPO_ALERT_LEVEL_RESPONSE)
+            && (p_socp_rsp->opcode != SOCP_HYPER_ALERT_LEVEL_RESPONSE)
+            && (p_socp_rsp->opcode != SOCP_RATE_OF_DECREASE_ALERT_LEVEL_RESPONSE)
+            && (p_socp_rsp->opcode != SOCP_RATE_OF_INCREASE_ALERT_LEVEL_RESPONSE)
+            && (p_socp_rsp->opcode != SOCP_READ_GLUCOSE_CALIBRATION_VALUE_RESPONSE)
+           )
+        {
+            p_data[len++] = p_socp_rsp->req_opcode;
+            p_data[len++] = p_socp_rsp->rsp_code;
+        }
+
+        for (i = 0; i < p_socp_rsp->size_val; i++)
+        {
+            p_data[len++] = p_socp_rsp->resp_val[i];
+        }
+    }
+
+    return len;
+}
+
+// static int cgms_socp_send_response(uint8_t opcode, uint8_t req_opcode, uint8_t rsp_code,
+// 	const uint8_t *value, uint8_t value_len)
+static int cgms_socp_send_response(nrf_ble_cgms_t * p_cgms)
+{
+	// uint8_t buf[20];
+	// uint8_t len;
+	uint8_t          encoded_resp[25];
+    uint16_t         len;
+    
+	// Send indication
+    len = ble_socp_encode(&(p_cgms->socp_response), encoded_resp);
+
 	if (len == 0U) {
 		return -EINVAL;
 	}
 
-	return cgms_socp_indicate(buf, len);
+	return cgms_socp_indicate(p_cgms, encoded_resp, len);
 }
 
-static int cgms_socp_send_u16_response(uint8_t opcode, uint16_t value)
-{
-	uint8_t resp[2];
+// static int cgms_socp_send_u16_response(uint8_t opcode, uint16_t value)
+// {
+// 	uint8_t resp[2];
 
-	put_le16(resp, value);
-	return cgms_socp_send_response(opcode, 0U, SOCP_RSP_SUCCESS, resp, sizeof(resp));
-}
-
+// 	put_le16(resp, value);
+// 	return cgms_socp_send_response(opcode, 0U, SOCP_RSP_SUCCESS, resp, sizeof(resp));
+// }
 ssize_t cgms_write_socp(struct bt_conn *conn, const struct bt_gatt_attr *attr,
+
 	const void *buf, uint16_t len, uint16_t offset, uint8_t flags)
 {
-	ble_cgms_socp_value_t req;
-	uint8_t value[2];
+	printk("Received write to SOCP characteristic, len: %u, offset: %u\n", len, offset);
+	// ble_cgms_socp_value_t req;
+	ble_cgms_socp_value_t                 socp_request;
+	nrf_ble_cgms_evt_t                    evt;
+	// uint8_t value[2];
+	// ble_gatts_rw_authorize_reply_params_t auth_reply;
+    uint32_t                              err_code;
+	int                                   socp_rsp_err;
+	nrf_ble_cgms_t * p_cgms;
 
 	ARG_UNUSED(conn);
 	ARG_UNUSED(attr);
@@ -167,110 +223,146 @@ ssize_t cgms_write_socp(struct bt_conn *conn, const struct bt_gatt_attr *attr,
 	if (offset != 0U) {
 		return BT_GATT_ERR(BT_ATT_ERR_INVALID_OFFSET);
 	}
+
+	// auth reply 适配
+
 	if (!m_socp_ind_enabled) {
 		return BT_GATT_ERR(BT_ATT_ERR_CCC_IMPROPER_CONF);
 	}
 
-	cgms_socp_decode((const uint8_t *)buf, len, &req);
+	// 解码opcode和参数
+	// ble_socp_decode(len, (const uint8_t *)buf, &socp_request);
 
-	switch (req.opcode) {
+	// 获取全局cgms结构体
+	p_cgms = ble_cgms_instance_get();
+	if (p_cgms == NULL) {
+		return BT_GATT_ERR(BT_ATT_ERR_UNLIKELY);
+	}
+
+	if ((conn != NULL) && (p_cgms->m_conn == NULL)) {
+		p_cgms->m_conn = bt_conn_ref(conn);
+	}
+
+	p_cgms->socp_response.opcode     = SOCP_RESPONSE_CODE;
+    p_cgms->socp_response.req_opcode = socp_request.opcode;
+    p_cgms->socp_response.rsp_code   = SOCP_RSP_OP_CODE_NOT_SUPPORTED;
+    p_cgms->socp_response.size_val   = 0;
+
+	switch (socp_request.opcode) {
 	case SOCP_WRITE_CGM_COMMUNICATION_INTERVAL:
-		if (req.operand_len < 1U) {
-			cgms_socp_send_response(SOCP_RESPONSE_CODE, req.opcode, SOCP_RSP_INVALID_OPERAND, NULL, 0U);
-			break;
+		printk("SOCP Write CGM Communication Interval received\n");
+		if ((len != 2U) || (socp_request.operand_len != 1U) || (socp_request.p_operand == NULL)) {
+			socp_rsp_err = cgms_socp_send_response_code(p_cgms,
+				socp_request.opcode,
+				SOCP_RSP_INVALID_OPERAND);
+			if (socp_rsp_err != 0) {
+				printk("SOCP response indicate failed (opcode: 0x%02X, rsp: 0x%02X, err: %d)\n",
+					socp_request.opcode, SOCP_RSP_INVALID_OPERAND, socp_rsp_err);
+			}
+			return len;
 		}
-		m_comm_interval = cgms_normalize_comm_interval(req.p_operand[0]);
+		p_cgms->comm_interval = cgms_normalize_comm_interval(socp_request.p_operand[0]);
 		cgms_emit_event(BLE_CGMS_EVT_WRITE_COMM_INTERVAL);
-		cgms_cancel_glucose_work();
-		if (m_session_started && (m_comm_interval != 0U)) {
-			cgms_schedule_glucose_work();
+		cgms_cancel_glucose_work(p_cgms);
+		if (p_cgms->is_session_started && (p_cgms->comm_interval != 0U)) {
+			cgms_schedule_glucose_work(p_cgms);
 		}
-		(void)cgms_socp_send_response(SOCP_RESPONSE_CODE, req.opcode, SOCP_RSP_SUCCESS, NULL, 0U);
-		break;
+		socp_rsp_err = cgms_socp_send_response_code(p_cgms,
+			socp_request.opcode,
+			SOCP_RSP_SUCCESS);
+		if (socp_rsp_err != 0) {
+			printk("SOCP response indicate failed (opcode: 0x%02X, rsp: 0x%02X, err: %d)\n",
+				socp_request.opcode, SOCP_RSP_SUCCESS, socp_rsp_err);
+		}
+		return len;
 	case SOCP_READ_CGM_COMMUNICATION_INTERVAL:
-		value[0] = m_comm_interval;
-		(void)cgms_socp_send_response(SOCP_READ_CGM_COMM_INTERVAL_RSP, req.opcode, SOCP_RSP_SUCCESS, value, 1U);
+		p_cgms->socp_response.opcode      = SOCP_READ_CGM_COMM_INTERVAL_RSP;
+		p_cgms->socp_response.resp_val[0] = p_cgms->comm_interval;
+		p_cgms->socp_response.size_val++;
 		break;
-	case SOCP_WRITE_GLUCOSE_CALIBRATION_VALUE:
-		if (req.operand_len != CGMS_CALIBRATION_VALUE_LEN) {
-			(void)cgms_socp_send_response(SOCP_RESPONSE_CODE, req.opcode, SOCP_RSP_INVALID_OPERAND, NULL, 0U);
-			break;
+	
+	case SOCP_START_THE_SESSION:
+		if (p_cgms->is_session_started) {
+			p_cgms->socp_response.rsp_code = SOCP_RSP_PROCEDURE_NOT_COMPLETED;
 		}
-		memcpy(m_calibration_value, req.p_operand, CGMS_CALIBRATION_VALUE_LEN);
-		(void)cgms_socp_send_response(SOCP_RESPONSE_CODE, req.opcode, SOCP_RSP_SUCCESS, NULL, 0U);
-		break;
-	case SOCP_READ_GLUCOSE_CALIBRATION_VALUE:
-		(void)cgms_socp_send_response(SOCP_READ_GLUCOSE_CALIBRATION_VALUE_RESPONSE, req.opcode, SOCP_RSP_SUCCESS,
-			m_calibration_value, CGMS_CALIBRATION_VALUE_LEN);
-		break;
-	case SOCP_WRITE_PATIENT_HIGH_ALERT_LEVEL:
-	case SOCP_WRITE_PATIENT_LOW_ALERT_LEVEL:
-	case SOCP_SET_HYPO_ALERT_LEVEL:
-	case SOCP_SET_HYPER_ALERT_LEVEL:
-	case SOCP_SET_RATE_OF_DECREASE_ALERT_LEVEL:
-	case SOCP_SET_RATE_OF_INCREASE_ALERT_LEVEL:
-	{
-		uint16_t level;
-		uint8_t status = cgms_socp_decode_u16(&req, &level);
-		if (status == SOCP_RSP_SUCCESS) {
-			switch (req.opcode) {
-			case SOCP_WRITE_PATIENT_HIGH_ALERT_LEVEL: m_alert_levels.patient_high = level; break;
-			case SOCP_WRITE_PATIENT_LOW_ALERT_LEVEL: m_alert_levels.patient_low = level; break;
-			case SOCP_SET_HYPO_ALERT_LEVEL: m_alert_levels.hypo = level; break;
-			case SOCP_SET_HYPER_ALERT_LEVEL: m_alert_levels.hyper = level; break;
-			case SOCP_SET_RATE_OF_DECREASE_ALERT_LEVEL: m_alert_levels.rate_decrease = level; break;
-			default: m_alert_levels.rate_increase = level; break;
+		else if ((p_cgms->nb_run_session != 0U) && 
+				 !cgms_feature_present(NRF_BLE_CGMS_FEAT_MULTIPLE_SESSIONS_SUPPORTED))
+		{
+			p_cgms->socp_response.rsp_code = SOCP_RSP_PROCEDURE_NOT_COMPLETED;
+		}
+		else
+		{
+			p_cgms->socp_response.rsp_code = SOCP_RSP_SUCCESS;
+			p_cgms->is_session_started     = true;
+			p_cgms->nb_run_session++;
+			
+			if (p_cgms->evt_handler != NULL)
+			{
+				evt.evt_type = BLE_CGMS_EVT_START_SESSION;
+				p_cgms->evt_handler(p_cgms, &evt);
+				// cgms_start_session(p_cgms);
+			}
+
+			ble_cgms_sst_t sst;
+			memset(&sst, 0, sizeof(ble_cgms_sst_t));
+
+			err_code = cgms_sst_set(p_cgms, &sst);
+			if (err_code != 0) {
+				p_cgms->socp_response.rsp_code = SOCP_RSP_PROCEDURE_NOT_COMPLETED;
+				printk("Failed to set SST (err %d)\n", err_code);
+				return BT_GATT_ERR(BT_ATT_ERR_UNLIKELY);
+			}
+			p_cgms->sensor_status.time_offset    = 0;
+			p_cgms->sensor_status.status.status &= (~NRF_BLE_CGMS_STATUS_SESSION_STOPPED);
+			
+			err_code = nrf_ble_cgms_update_status(p_cgms, &p_cgms->sensor_status);
+			if (err_code != 0)
+			{
+				p_cgms->socp_response.rsp_code = SOCP_RSP_PROCEDURE_NOT_COMPLETED;
+				printk("Failed to update status (err %d)\n", err_code);
+				return BT_GATT_ERR(BT_ATT_ERR_UNLIKELY);
 			}
 		}
-		(void)cgms_socp_send_response(SOCP_RESPONSE_CODE, req.opcode, status, NULL, 0U);
 		break;
-	}
-	case SOCP_READ_PATIENT_HIGH_ALERT_LEVEL:
-		(void)cgms_socp_send_u16_response(SOCP_READ_PATIENT_HIGH_ALERT_LEVEL_RESPONSE, m_alert_levels.patient_high);
-		break;
-	case SOCP_READ_PATIENT_LOW_ALERT_LEVEL:
-		(void)cgms_socp_send_u16_response(SOCP_READ_PATIENT_LOW_ALERT_LEVEL_RESPONSE, m_alert_levels.patient_low);
-		break;
-	case SOCP_GET_HYPO_ALERT_LEVEL:
-		(void)cgms_socp_send_u16_response(SOCP_HYPO_ALERT_LEVEL_RESPONSE, m_alert_levels.hypo);
-		break;
-	case SOCP_GET_HYPER_ALERT_LEVEL:
-		(void)cgms_socp_send_u16_response(SOCP_HYPER_ALERT_LEVEL_RESPONSE, m_alert_levels.hyper);
-		break;
-	case SOCP_GET_RATE_OF_DECREASE_ALERT_LEVEL:
-		(void)cgms_socp_send_u16_response(SOCP_RATE_OF_DECREASE_ALERT_LEVEL_RESPONSE, m_alert_levels.rate_decrease);
-		break;
-	case SOCP_GET_RATE_OF_INCREASE_ALERT_LEVEL:
-		(void)cgms_socp_send_u16_response(SOCP_RATE_OF_INCREASE_ALERT_LEVEL_RESPONSE, m_alert_levels.rate_increase);
-		break;
-	case SOCP_RESET_DEVICE_SPECIFIC_ALERT:
-		m_status.annunciation.status &= (uint8_t)(~NRF_BLE_CGMS_STATUS_DEVICE_SPECIFIC_ALERT);
-		(void)cgms_socp_send_response(SOCP_RESPONSE_CODE, req.opcode, SOCP_RSP_SUCCESS, NULL, 0U);
-		break;
-	case SOCP_START_THE_SESSION:
-		if (m_session_started) {
-			(void)cgms_socp_send_response(SOCP_RESPONSE_CODE, req.opcode, SOCP_RSP_PROCEDURE_NOT_COMPLETED, NULL, 0U);
-			break;
-		}
-		if ((m_nb_run_session != 0U) && !cgms_feature_present(NRF_BLE_CGMS_FEAT_MULTIPLE_SESSIONS_SUPPORTED)) {
-			(void)cgms_socp_send_response(SOCP_RESPONSE_CODE, req.opcode, SOCP_RSP_PROCEDURE_NOT_COMPLETED, NULL, 0U);
-			break;
-		}
-		if (cgms_sst_set(NULL, &m_sst) != 0) {
-			(void)cgms_socp_send_response(SOCP_RESPONSE_CODE, req.opcode, SOCP_RSP_PROCEDURE_NOT_COMPLETED, NULL, 0U);
-			break;
-		}
-		cgms_start_session();
-		(void)cgms_socp_send_response(SOCP_RESPONSE_CODE, req.opcode, SOCP_RSP_SUCCESS, NULL, 0U);
-		break;
-	case SOCP_STOP_THE_SESSION:
-		cgms_stop_session();
-		(void)cgms_socp_send_response(SOCP_RESPONSE_CODE, req.opcode, SOCP_RSP_SUCCESS, NULL, 0U);
-		break;
-	default:
-		(void)cgms_socp_send_response(SOCP_RESPONSE_CODE, req.opcode, SOCP_RSP_OP_CODE_NOT_SUPPORTED, NULL, 0U);
-		break;
-	}
 
+	case SOCP_STOP_THE_SESSION:
+        {
+            nrf_ble_cgm_status_t status;
+            memset(&status, 0, sizeof(nrf_ble_cgm_status_t));
+			
+            p_cgms->socp_response.rsp_code = SOCP_RSP_SUCCESS;
+            p_cgms->is_session_started     = false;
+
+            status.time_offset   = p_cgms->sensor_status.time_offset;
+            status.status.status = p_cgms->sensor_status.status.status |
+                                   NRF_BLE_CGMS_STATUS_SESSION_STOPPED;
+
+            if (p_cgms->evt_handler != NULL)
+            {
+                evt.evt_type = BLE_CGMS_EVT_STOP_SESSION;
+                p_cgms->evt_handler(p_cgms, &evt);
+            }
+            err_code = nrf_ble_cgms_update_status(p_cgms, &status);
+            if (err_code != 0)
+            {
+               	p_cgms->socp_response.rsp_code = SOCP_RSP_PROCEDURE_NOT_COMPLETED;
+				printk("Failed to update status (err %d)\n", err_code);
+				return BT_GATT_ERR(BT_ATT_ERR_UNLIKELY);
+            }
+            break;
+        }
+
+		default:
+            p_cgms->socp_response.rsp_code = SOCP_RSP_OP_CODE_NOT_SUPPORTED;
+            break;
+	}
+	socp_rsp_err = cgms_socp_send_response(p_cgms);
+	if (socp_rsp_err != 0) {
+		printk("SOCP response indicate failed (opcode: 0x%02X, rsp: 0x%02X, err: %d)\n",
+			socp_request.opcode, p_cgms->socp_response.rsp_code, socp_rsp_err);
+	} else {
+		printk("Received SOCP opcode: 0x%02X, sent response with code: 0x%02X\n",
+			socp_request.opcode, p_cgms->socp_response.rsp_code);
+	}
 	return len;
 }

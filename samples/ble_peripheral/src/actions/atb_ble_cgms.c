@@ -7,9 +7,9 @@
 #include "cgms_socp.h"
 #include "cgms_sst.h"
 
-struct bt_conn *m_conn;
 ble_cgms_evt_handler_t m_evt_handler;
 struct k_delayed_work m_glucose_work;
+static nrf_ble_cgms_t *m_cgms_ctx;
 ble_cgms_rec_t m_records[CGMS_DB_MAX_RECORDS];
 uint16_t m_record_count;
 struct cgms_feature_value m_feature = {
@@ -17,20 +17,16 @@ struct cgms_feature_value m_feature = {
 	.type = NRF_BLE_CGMS_MEAS_TYPE_VEN_BLOOD,
 	.sample_location = NRF_BLE_CGMS_MEAS_LOC_AST,
 };
-struct cgms_status m_status = {
+nrf_ble_cgm_status_t m_status = {
 	.time_offset = 0,
-	.annunciation = {
+	.status = {
 		.warning = 0,
 		.calib_temp = 0,
 		.status = NRF_BLE_CGMS_STATUS_SESSION_STOPPED,
 	},
 };
 ble_cgms_sst_t m_sst;
-uint16_t m_session_run_time = 20;
-uint8_t m_comm_interval = GLUCOSE_MEAS_INTERVAL_MINUTES;
-bool m_session_started;
-uint8_t m_nb_run_session;
-uint16_t m_current_offset;
+uint16_t m_current_offset; // 用于形成记录时间线 zephyr
 uint16_t m_glucose_concentration = MIN_GLUCOSE_CONCENTRATION;
 bool m_meas_notify_enabled;
 bool m_racp_ind_enabled;
@@ -68,7 +64,7 @@ void cgms_emit_event(ble_cgms_evt_type_t evt_type)
 	}
 
 	evt.evt_type = evt_type;
-	m_evt_handler(NULL, &evt);
+	m_evt_handler(m_cgms_ctx, &evt);
 }
 
 BT_GATT_SERVICE_DEFINE(cgms_svc,
@@ -143,27 +139,65 @@ uint32_t ble_cgms_init(nrf_ble_cgms_t * p_cgms, const nrf_ble_cgms_init_t * p_cg
     }
 
 	// 初始化service结构体
-	
+	p_cgms->evt_handler        = p_cgms_init->evt_handler;
+	p_cgms->feature            = p_cgms_init->feature;
+	p_cgms->sensor_status      = p_cgms_init->initial_sensor_status;
+	p_cgms->session_run_time   = p_cgms_init->initial_run_time;
+	p_cgms->is_session_started = false;
+	p_cgms->nb_run_session     = 0;
+	p_cgms->comm_interval      = GLUCOSE_MEAS_INTERVAL_MINUTES;
+    m_cgms_ctx = p_cgms;
+    // p_cgms->conn_handle        = BLE_CONN_HANDLE_INVALID;
 
+	p_cgms->feature.feature         = 0;
+    p_cgms->feature.feature        |= NRF_BLE_CGMS_FEAT_MULTIPLE_BOND_SUPPORTED;
+    p_cgms->feature.feature        |= NRF_BLE_CGMS_FEAT_MULTIPLE_SESSIONS_SUPPORTED;
+    p_cgms->feature.type            = NRF_BLE_CGMS_MEAS_TYPE_VEN_BLOOD;
+    p_cgms->feature.sample_location = NRF_BLE_CGMS_MEAS_LOC_AST;
+    p_cgms->feature.feature        |= NRF_BLE_CGMS_FEAT_MULTIPLE_BOND_SUPPORTED;
+
+
+	
 	memset(m_records, 0, sizeof(m_records));
 	m_record_count = 0U;
-	m_conn = NULL;
+	p_cgms->m_conn = NULL;
 	m_meas_notify_enabled = false;
 	m_racp_ind_enabled = false;
 	m_socp_ind_enabled = false;
-	m_session_started = false;
-	m_nb_run_session = 0U;
 	m_current_offset = 0U;
 	cgms_racp_reset_state();
 	m_status.time_offset = 0U;
-	m_status.annunciation.warning = 0U;
-	m_status.annunciation.calib_temp = 0U;
-	m_status.annunciation.status = NRF_BLE_CGMS_STATUS_SESSION_STOPPED;
-	m_comm_interval = GLUCOSE_MEAS_INTERVAL_MINUTES;
+	m_status.status.warning = 0U;
+	m_status.status.calib_temp = 0U;
+	m_status.status.status = NRF_BLE_CGMS_STATUS_SESSION_STOPPED;
 	m_glucose_concentration = MIN_GLUCOSE_CONCENTRATION;
 	memset(&m_alert_levels, 0, sizeof(m_alert_levels));
 	memset(&m_sst, 0, sizeof(m_sst));
 	k_delayed_work_init(&m_glucose_work, cgms_meas_work_handler);
+	return 0;
+}
+
+uint32_t nrf_ble_cgms_update_status(nrf_ble_cgms_t * p_cgms, const nrf_ble_cgm_status_t * p_status)
+{
+	uint8_t encoded[5];
+	uint8_t len = 0U;
+
+	if ((p_cgms == NULL) || (p_status == NULL)) {
+		return EINVAL;
+	}
+
+	put_le16(&encoded[len], p_status->time_offset);
+	len += sizeof(uint16_t);
+	encoded[len++] = p_status->status.status;
+	encoded[len++] = p_status->status.calib_temp;
+	encoded[len++] = p_status->status.warning;
+
+	if (len != 5U) {
+		return EINVAL;
+	}
+
+	p_cgms->sensor_status = *p_status;
+	m_status = *p_status;
 	return 0;
 }
 
@@ -174,21 +208,39 @@ void ble_cgms_register_evt_handler(ble_cgms_evt_handler_t handler)
 
 void ble_cgms_connected(struct bt_conn *conn)
 {
-	m_conn = conn;
+	nrf_ble_cgms_t * p_cgms = ble_cgms_instance_get();
+
+	if ((p_cgms == NULL) || (conn == NULL)) {
+		return;
+	}
+
+	if (p_cgms->m_conn != NULL) {
+		bt_conn_unref(p_cgms->m_conn);
+		p_cgms->m_conn = NULL;
+	}
+
+	p_cgms->m_conn = bt_conn_ref(conn);
+	printk("CGMS connected: %p\n", (void *)p_cgms->m_conn);
 }
 
-void ble_cgms_disconnected(struct bt_conn *conn)
+nrf_ble_cgms_t * ble_cgms_instance_get(void)
 {
-	if (m_conn == conn) {
-		m_conn = NULL;
+	return m_cgms_ctx;
+}
+
+void ble_cgms_disconnected(nrf_ble_cgms_t * p_cgms, struct bt_conn *conn)
+{
+	if ((p_cgms != NULL) && (p_cgms->m_conn == conn)) {
+		bt_conn_unref(p_cgms->m_conn);
+		p_cgms->m_conn = NULL;
 	}
 	m_meas_notify_enabled = false;
 	m_racp_ind_enabled = false;
 	m_socp_ind_enabled = false;
 	cgms_racp_reset_state();
-	cgms_cancel_glucose_work();
-	if (m_session_started) {
-		cgms_schedule_glucose_work();
+	cgms_cancel_glucose_work(p_cgms);
+	if ((p_cgms != NULL) && p_cgms->is_session_started) {
+		cgms_schedule_glucose_work(p_cgms);
 	}
 }
 

@@ -5,6 +5,7 @@
 ".\build\msg_manager.o"
 ".\build\system_app_wdg.o"
 ".\build\ble_data_test_sample.o"
+".\build\atb_ble_std_services.o"
 ".\build\sys_monitor.o"
 ".\build\sys_wakelock.o"
 ".\build\sys_standby.o"

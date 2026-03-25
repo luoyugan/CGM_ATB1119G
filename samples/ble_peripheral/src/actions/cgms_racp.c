@@ -53,6 +53,7 @@ void cgms_racp_ccc_cfg_changed(const struct bt_gatt_attr *attr, uint16_t value)
 	m_racp_ind_enabled = (value == BT_GATT_CCC_INDICATE);
 }
 
+// cgms_racp_on_tx_complete适配
 static void cgms_racp_ind_cb(struct bt_conn *conn, struct bt_gatt_indicate_params *params, uint8_t err)
 {
 	ARG_UNUSED(conn);
@@ -60,10 +61,11 @@ static void cgms_racp_ind_cb(struct bt_conn *conn, struct bt_gatt_indicate_param
 	ARG_UNUSED(err);
 }
 
+// cgms_racp_on_rw_auth_req适配 
 static int cgms_racp_indicate(nrf_ble_cgms_t * p_cgms, ble_racp_value_t * p_racp_val)
 {
 	// 目前保留
-	if ((m_conn == NULL) || !m_racp_ind_enabled) {
+    if ((p_cgms == NULL) || (p_cgms->m_conn == NULL) || !m_racp_ind_enabled) {
 		return -ENOTCONN;
 	}
 
@@ -72,33 +74,22 @@ static int cgms_racp_indicate(nrf_ble_cgms_t * p_cgms, ble_racp_value_t * p_racp
 
 	len = ble_racp_encode(p_racp_val, encoded_resp);
 
+    if ((len == 0U) || (len > sizeof(m_racp_ind_buf))) {
+        return -EINVAL;
+    }
+
+    memcpy(m_racp_ind_buf, encoded_resp, len);
+
 	memset(&m_racp_ind_params, 0, sizeof(m_racp_ind_params));
 	m_racp_ind_params.attr = &attr_cgms_svc[CGMS_ATTR_RACP_VAL];
-	m_racp_ind_params.data = encoded_resp;
+    m_racp_ind_params.data = m_racp_ind_buf;
 	m_racp_ind_params.len = len;
 	m_racp_ind_params.func = cgms_racp_ind_cb; //nordic用的是p_cgms->gatt_err_handler
-	return bt_gatt_indicate(m_conn, &m_racp_ind_params);
+    return bt_gatt_indicate(p_cgms->m_conn, &m_racp_ind_params);
 }
 
 static void cgms_send_racp_response_code(nrf_ble_cgms_t * p_cgms,uint8_t req_opcode, uint8_t rsp_code)
 {
-	// uint8_t buf[8];
-	// uint8_t operand[2];
-	// uint8_t len;
-	// ble_racp_value_t rsp;
-
-	// operand[0] = req_opcode;
-	// operand[1] = rsp_code;
-	
-	// rsp.opcode = RACP_OPCODE_RESPONSE_CODE;
-	// rsp.operator = RACP_OPERATOR_NULL;
-	// rsp.operand_len = sizeof(operand);
-	// rsp.p_operand = operand;
-
-	// len = ble_racp_encode(buf, sizeof(buf), &rsp);
-	// if (len == 0U) {
-	// 	return;
-	// }
 	p_cgms->racp_data.pending_racp_response.opcode      = RACP_OPCODE_RESPONSE_CODE;
     p_cgms->racp_data.pending_racp_response.operator    = RACP_OPERATOR_NULL;
     p_cgms->racp_data.pending_racp_response.operand_len = 2;
@@ -628,11 +619,16 @@ void cgms_racp_on_meas_tx_complete(struct bt_conn *conn, void *user_data)
 // 	return len;
 // }
 
+/**@brief Function for handling a write event to the Record Access Control Point.
+ *
+ * @param[in]   p_cgms      Service instance. 待补充
+ * @param[in]   p_evt_write WRITE event to be handled.
+ */
 ssize_t cgms_write_racp(struct bt_conn *conn, const struct bt_gatt_attr *attr,
 	const void *buf, uint16_t len, uint16_t offset, uint8_t flags)
 {
 	// ble_racp_value_t req;
-	nrf_ble_cgms_t * p_cgms;
+    nrf_ble_cgms_t * p_cgms;
 	uint8_t response_code;
 	// uint16_t count;
 
@@ -650,10 +646,25 @@ ssize_t cgms_write_racp(struct bt_conn *conn, const struct bt_gatt_attr *attr,
 		return BT_GATT_ERR(BT_ATT_ERR_CCC_IMPROPER_CONF);
 	}
 
+    p_cgms = ble_cgms_instance_get();
+    if (p_cgms == NULL) {
+        return BT_GATT_ERR(BT_ATT_ERR_UNLIKELY);
+    }
+
+    if ((buf == NULL) || (len < 2U)) {
+        cgms_send_racp_response_code(p_cgms, RACP_OPCODE_RESERVED, RACP_RESPONSE_INVALID_OPERAND);
+        return len;
+    }
+
 	// cgms_racp_decode((const uint8_t *)buf, len, &req);
+    //Decode request
 	ble_racp_decode(len, (const uint8_t *)buf, &p_cgms->racp_data.racp_request);
+    
+    // check if request is to be executed
 	if (is_request_to_be_executed(p_cgms, &p_cgms->racp_data.racp_request, &response_code)) {
 		// auth reply 适配、
+
+
 		// Execute request
         if (p_cgms->racp_data.racp_request.opcode == RACP_OPCODE_REPORT_RECS)
         {
@@ -681,3 +692,4 @@ ssize_t cgms_write_racp(struct bt_conn *conn, const struct bt_gatt_attr *attr,
     }
 	return len;
 }
+

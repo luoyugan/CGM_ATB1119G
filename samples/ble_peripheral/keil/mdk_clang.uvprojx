@@ -483,6 +483,11 @@
               <FileType>1</FileType>
               <FilePath>..\src\actions\ble_data_test_sample.c</FilePath>
             </File>
+            <File>
+              <FileName>atb_ble_std_services.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\src\actions\atb_ble_std_services.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

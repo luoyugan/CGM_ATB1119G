@@ -236,16 +236,11 @@ struct cgms_feature_value {
 };
 
 /**@brief Status of the CGM measurement. */
-// typedef struct
-// {
-//     uint16_t                     time_offset; /**< Time offset. */
-//     nrf_ble_cgms_sensor_annunc_t status;      /**< Status. */
-// } nrf_ble_cgm_status_t;
-
-struct cgms_status {
-	uint16_t time_offset;
-	nrf_ble_cgms_sensor_annunc_t annunciation;
-};
+typedef struct
+{
+    uint16_t                     time_offset; /**< Time offset. */
+    nrf_ble_cgms_sensor_annunc_t status;      /**< Status. */
+} nrf_ble_cgm_status_t;
 
 
 typedef struct {
@@ -257,6 +252,7 @@ typedef struct {
 	uint8_t seconds;
 } ble_date_time_t;
 
+// 存储在CGMS实例中会更好，目前没有接口，先用全局变量
 typedef struct {
     ble_date_time_t date_time;
     uint8_t time_zone;
@@ -269,7 +265,7 @@ typedef struct
     // ble_srv_error_handler_t   error_handler;         /**< Function to be called when an error occurs. */
     // nrf_ble_gq_t            * p_gatt_queue;          /**< Pointer to BLE GATT Queue instance. */
     nrf_ble_cgms_feature_t    feature;               /**< Features supported by the service. */
-    struct cgms_status      initial_sensor_status; /**< Sensor status. */
+    nrf_ble_cgm_status_t      initial_sensor_status; /**< Sensor status. */
     uint16_t                  initial_run_time;      /**< Run time. */
 } nrf_ble_cgms_init_t;
 
@@ -336,6 +332,7 @@ struct ble_cgms_s
     uint16_t                    service_handle;                              /**< Handle of the CGM Service (as provided by the BLE stack). */
     // nrf_ble_cgms_char_handler_t char_handles;                                /**< GATTS characteristic handles for the different characteristics in the service. */
     uint16_t                    conn_handle;                                 /**< Handle of the current connection (as provided by the BLE stack; @ref BLE_CONN_HANDLE_INVALID if not in a connection). */
+    struct bt_conn            * m_conn;                                      /**< Zephyr connection reference used by CGMS data path. */
     nrf_ble_cgms_feature_t      feature;                                     /**< Structure to store the value of the feature characteristic. */
     uint8_t                     comm_interval;                               /**< Variable to keep track of the communication interval. */
     ble_socp_rsp_t              socp_response;                               /**< Structure containing reponse data to be indicated to the peer device. */
@@ -343,7 +340,7 @@ struct ble_cgms_s
     bool                        is_session_started;                          /**< Indicator if we are currently in a session. */
     uint8_t                     nb_run_session;                              /**< Variable to keep track of the number of sessions that were run. */
     uint16_t                    session_run_time;                            /**< Variable to store the expected run time of a session. */
-    struct cgms_status          sensor_status;                               /**< Structure to keep track of the sensor status. */
+    nrf_ble_cgm_status_t        sensor_status;                              /**< Structure to keep track of the sensor status. */
     nrf_ble_cgms_racp_t         racp_data;                                   /**< Structure to manage Record Access requests. */
 };
 
@@ -368,20 +365,18 @@ enum {
 	CGMS_ATTR_SOCP_CCC,
 };
 
+#define NRF_BLE_CGMS_DEF(_name)                                                                     \
+static nrf_ble_cgms_t _name; 
+
 extern const struct bt_gatt_attr attr_cgms_svc[];
 
-extern struct bt_conn *m_conn;
 extern ble_cgms_evt_handler_t m_evt_handler;
 extern struct k_delayed_work m_glucose_work;
 // extern struct cgms_record m_records[];
 extern uint16_t m_record_count;
 extern struct cgms_feature_value m_feature;
-extern struct cgms_status m_status;
+extern nrf_ble_cgm_status_t m_status;
 extern ble_cgms_sst_t m_sst;
-extern uint16_t m_session_run_time;
-extern uint8_t m_comm_interval;
-extern bool m_session_started;
-extern uint8_t m_nb_run_session;
 extern uint16_t m_current_offset;
 extern uint16_t m_glucose_concentration;
 extern bool m_meas_notify_enabled;
@@ -398,9 +393,11 @@ extern uint8_t m_calibration_value[CGMS_CALIBRATION_VALUE_LEN];
 void cgms_emit_event(ble_cgms_evt_type_t evt_type);
 
 uint32_t ble_cgms_init(nrf_ble_cgms_t * p_cgms, const nrf_ble_cgms_init_t * p_cgms_init);
+uint32_t nrf_ble_cgms_update_status(nrf_ble_cgms_t * p_cgms, const nrf_ble_cgm_status_t * p_status);
 void ble_cgms_register_evt_handler(ble_cgms_evt_handler_t handler);
 void ble_cgms_connected(struct bt_conn *conn);
-void ble_cgms_disconnected(struct bt_conn *conn);
+void ble_cgms_disconnected(nrf_ble_cgms_t * p_cgms, struct bt_conn *conn);
+nrf_ble_cgms_t * ble_cgms_instance_get(void);
 void ble_cgms_increase_glucose(void);
 void ble_cgms_decrease_glucose(void);
 uint16_t uint16_decode(const uint8_t * p_encoded_data);

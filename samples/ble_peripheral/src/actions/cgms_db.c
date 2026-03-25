@@ -213,9 +213,9 @@ uint8_t cgms_encode_feature(uint8_t *buf)
 uint8_t cgms_encode_status(uint8_t *buf)
 {
 	put_le16(buf, m_status.time_offset);
-	buf[2] = m_status.annunciation.status;
-	buf[3] = m_status.annunciation.calib_temp;
-	buf[4] = m_status.annunciation.warning;
+    buf[2] = m_status.status.status;
+    buf[3] = m_status.status.calib_temp;
+    buf[4] = m_status.status.warning;
 	return 5;
 }
 

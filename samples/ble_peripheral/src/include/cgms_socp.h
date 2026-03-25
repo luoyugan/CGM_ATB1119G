@@ -45,6 +45,7 @@
 #define SOCP_RSP_PROCEDURE_NOT_COMPLETED               0x04
 #define SOCP_RSP_OUT_OF_RANGE                          0x05
 
+/**@brief Specific Operation Control Point value. */
 typedef struct {
 	uint8_t opcode;
 	uint8_t operand_len;
